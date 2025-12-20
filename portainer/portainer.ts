@@ -1,34 +1,34 @@
 
-import dotenv from 'dotenv';
 import { PortainerAuth } from './auth';
 import { PortainerEnvironment } from './interfaces';
-
-if (!process.env.PORTAINER_URL) {
-    // Suppress console output during dotenv configuration
-    const originalConsoleLog = console.log;
-    const originalConsoleInfo = console.info;
-    console.log = () => { };
-    console.info = () => { };
-
-    dotenv.config({ path: '.env', debug: false });
-
-    // Restore original console functions
-    console.log = originalConsoleLog;
-    console.info = originalConsoleInfo;
-}
-
 /**
  * Portainer API Client
  * 
  * Handles portainer API interactions.
  */
 export class PortainerApiClient extends PortainerAuth {
-    
+    private environmentId: number | null = null; // Environment ID, can be null on init but must be defined when used
+    private _environmentIdValidated: boolean = false;
+
     constructor(portainerUrl: string, apiToken: string) {
         // Creates class of upstream PortainerAuth instance
         super(portainerUrl, apiToken);
     }
 
+    /**
+     * Gets the default environment ID.
+     */
+    public get DefaultEnvironmentId(): number | null {
+        return this.environmentId;
+    }
+
+    set DefaultEnvironmentId(environmentId: number | null) {
+        if (environmentId === null || typeof environmentId === 'number') {
+            this.environmentId = environmentId;
+            this._environmentIdValidated = false; // Reset validation when changed
+        }
+    }
+    
     /**
      * Fetches details of a specific Portainer environment.
      * @param environmentId - The ID of the environment to fetch.

@@ -3,12 +3,13 @@ import https from 'https';
 
 export class PortainerAuth {
     private portainerUrl: string; // Portainer URL, must be defined
-    private environmentId: number | null = null; // Environment ID, can be null
     private apiToken: string; // Access token, must be defined for API calls
-    private _environmentIdValidated: boolean = false;
     public axiosInstance: AxiosInstance;
 
     /**
+     * Constructor for PortainerAuth
+     * @param portainerUrl - The URL of the Portainer instance.
+     * @param apiToken - The API token for authentication.
      */
     constructor(
         portainerUrl: string,
@@ -73,24 +74,10 @@ export class PortainerAuth {
     }
 
     /**
-     * Gets the default environment ID.
-     */
-    public get DefaultEnvironmentId(): number | null {
-        return this.environmentId;
-    }
-
-    /**
      * Gets the portainer URL.
      * @return {string} The Portainer URL.
      */
     public get PortainerUrl(): string {
         return this.portainerUrl;
-    }
-
-    set DefaultEnvironmentId(environmentId: number | null) {
-        if (environmentId === null || typeof environmentId === 'number') {
-            this.environmentId = environmentId;
-            this._environmentIdValidated = false; // Reset validation when changed
-        }
     }
 }
