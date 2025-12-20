@@ -1,14 +1,16 @@
 
 import { PortainerAuth } from './auth.ts';
 import type { PortainerStack, PortainerEnvironment, PortainerContainer } from './interfaces.ts';
+import { getFirstEnvironmentId } from './utils.ts';
 /**
  * Portainer API Client
  * 
  * Handles portainer API interactions.
  */
-export class PortainerApiClient extends PortainerAuth {
+class PortainerApiClient {
     private environmentId: number | null = null; // Environment ID, can be null on init but must be defined when used
     private _environmentIdValidated: boolean = false;
+    private auth: PortainerAuth;
 
     constructor(
         portainerUrl: string, 
@@ -16,17 +18,9 @@ export class PortainerApiClient extends PortainerAuth {
         environmentId: number | null = null
     ) {
         // Creates class of upstream PortainerAuth instance
-        super(portainerUrl, apiToken);
-
-        if (environmentId !== null) {
-            this.environmentId = environmentId;
-        } else {
-            this.getFirstEnvironmentId().then((envId) => {
-                this.environmentId = envId;
-            }).catch((error) => {
-                console.error('Error fetching first environment ID during initialization:', error);
-            });
-        }
+        this.environmentId = environmentId;
+        this._environmentIdValidated = environmentId !== null;
+        this.auth = new PortainerAuth(portainerUrl, apiToken);
     }
 
     /**
@@ -50,11 +44,11 @@ export class PortainerApiClient extends PortainerAuth {
      */
     async getEnvironment(environmentId: number): Promise<PortainerEnvironment> {
         try {
-            if (!this.isValidated) {
+            if (!this.auth.isValidated) {
                 throw new Error('Authentication not validated. Cannot fetch environment.');
             }
 
-            const response = await this.axiosInstance.get<PortainerEnvironment>(`/api/endpoints/${environmentId}`);
+            const response = await this.auth.axiosInstance.get<PortainerEnvironment>(`/api/endpoints/${environmentId}`);
             return response.data;
         } catch (error) {
             console.error(`Failed to fetch environment ${environmentId}:`, error);
@@ -68,11 +62,11 @@ export class PortainerApiClient extends PortainerAuth {
      */
     async getEnvironments(): Promise<PortainerEnvironment[]> {
         try {
-            if (!this.isValidated) {
+            if (!this.auth.isValidated) {
                 throw new Error('Authentication not validated. Cannot fetch environments.');
             }
 
-            const response = await this.axiosInstance.get<PortainerEnvironment[]>('/api/endpoints');
+            const response = await this.auth.axiosInstance.get<PortainerEnvironment[]>('/api/endpoints');
             return response.data;
         } catch (error) {
             console.error('Failed to fetch environments:', error);
@@ -86,7 +80,7 @@ export class PortainerApiClient extends PortainerAuth {
      */
     async getStacks(): Promise<PortainerStack[]> {
         try {
-            const response = await this.axiosInstance.get<PortainerStack[]>('/api/stacks');
+            const response = await this.auth.axiosInstance.get<PortainerStack[]>('/api/stacks');
             return response.data;
         } catch (error) {
             console.error('Failed to fetch stacks:', error);
@@ -105,7 +99,7 @@ export class PortainerApiClient extends PortainerAuth {
         // If no environment ID is provided and no default is set, try to get the first one
         if (this.environmentId === null) {
             console.log('No environment ID provided for getContainers, attempting to fetch first available environment...');
-            this.environmentId = await this.getFirstEnvironmentId();
+            this.environmentId = await getFirstEnvironmentId();
             if (this.environmentId === null) {
                 throw new Error('No Portainer environments found. Cannot fetch containers.');
             }
@@ -114,24 +108,10 @@ export class PortainerApiClient extends PortainerAuth {
         
         try {
             const params = { all: includeAll };
-            const response = await this.axiosInstance.get<PortainerContainer[]>(`/api/endpoints/${this.environmentId}/docker/containers/json`, { params });
+            const response = await this.auth.axiosInstance.get<PortainerContainer[]>(`/api/endpoints/${this.environmentId}/docker/containers/json`, { params });
             return response.data;
         } catch (error) {
             throw new Error(`Failed to fetch containers: ${error}`);
-        }
-    }
-
-    /**
-     * Get the first available environment ID
-     * @returns Promise resolving to the first environment ID or null if none found
-     */
-    async getFirstEnvironmentId(): Promise<number | null> {
-        try {
-            const environments = await this.getEnvironments();
-            return environments.length > 0 ? environments[0].Id : null;
-        } catch (error) {
-            console.error('Error getting first environment ID:', error);
-            return null;
         }
     }
 
@@ -141,11 +121,11 @@ export class PortainerApiClient extends PortainerAuth {
      */
     async testConnection(): Promise<boolean> {
         try {
-            if (!this.isValidated) {
+            if (!this.auth.isValidated) {
                 throw new Error('Authentication not validated. Cannot test connection.');
             }
 
-            await this.axiosInstance.get('/api/system/status');
+            await this.auth.axiosInstance.get('/api/system/status');
             console.log('Successfully connected to Portainer API.');
             return true;
         } catch (error) {
@@ -154,3 +134,9 @@ export class PortainerApiClient extends PortainerAuth {
         }
     }
 }
+
+// Create one instance to be used globally
+export const portainerClient = new PortainerApiClient(
+    process.env.PORTAINER_URL || 'http://localhost:9000',
+    process.env.PORTAINER_API_TOKEN || ''
+);

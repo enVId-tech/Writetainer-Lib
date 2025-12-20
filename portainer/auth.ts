@@ -2,10 +2,10 @@ import axios, { type AxiosInstance } from 'axios';
 import https from 'https';
 
 export class PortainerAuth {
-    protected portainerUrl: string; // Portainer URL, must be defined
-    protected apiToken: string; // Access token, must be defined for API calls
-    protected isValidated: boolean; // Indicates if authentication has been validated
-    public axiosInstance: AxiosInstance;
+    private portainerUrl: string; // Portainer URL, must be defined
+    private apiToken: string; // Access token, must be defined for API calls
+    isValidated: boolean; // Indicates if authentication has been validated
+    axiosInstance: AxiosInstance;
 
     /**
      * Constructor for PortainerAuth
