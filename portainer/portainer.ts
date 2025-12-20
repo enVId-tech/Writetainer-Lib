@@ -1,6 +1,6 @@
 
 import { PortainerAuth } from './auth.ts';
-import type { PortainerStack, PortainerEnvironment } from './interfaces.ts';
+import type { PortainerStack, PortainerEnvironment, PortainerContainer } from './interfaces.ts';
 /**
  * Portainer API Client
  * 
@@ -10,9 +10,23 @@ export class PortainerApiClient extends PortainerAuth {
     private environmentId: number | null = null; // Environment ID, can be null on init but must be defined when used
     private _environmentIdValidated: boolean = false;
 
-    constructor(portainerUrl: string, apiToken: string) {
+    constructor(
+        portainerUrl: string, 
+        apiToken: string,
+        environmentId: number | null = null
+    ) {
         // Creates class of upstream PortainerAuth instance
         super(portainerUrl, apiToken);
+
+        if (environmentId !== null) {
+            this.environmentId = environmentId;
+        } else {
+            this.getFirstEnvironmentId().then((envId) => {
+                this.environmentId = envId;
+            }).catch((error) => {
+                console.error('Error fetching first environment ID during initialization:', error);
+            });
+        }
     }
 
     /**
@@ -80,6 +94,46 @@ export class PortainerApiClient extends PortainerAuth {
         }
     }
 
+        /**
+     * Fetches a list of all containers within a specific Portainer environment.
+     * This proxies the Docker API's /containers/json endpoint.
+     * @param environmentId - The ID of the Portainer environment. Defaults to `this.defaultEnvironmentId`.
+     * @param includeAll - Whether to include all containers (running, stopped, etc.).
+     * @returns {Promise<PortainerContainer[]>} A promise that resolves to an array of container objects.
+     */
+    async getContainers(includeAll: boolean): Promise<PortainerContainer[] | undefined> {
+        // If no environment ID is provided and no default is set, try to get the first one
+        if (this.environmentId === null) {
+            console.log('No environment ID provided for getContainers, attempting to fetch first available environment...');
+            this.environmentId = await this.getFirstEnvironmentId();
+            if (this.environmentId === null) {
+                throw new Error('No Portainer environments found. Cannot fetch containers.');
+            }
+            console.log(`Using environment ID: ${this.environmentId}`);
+        }
+        
+        try {
+            const params = { all: includeAll };
+            const response = await this.axiosInstance.get<PortainerContainer[]>(`/api/endpoints/${this.environmentId}/docker/containers/json`, { params });
+            return response.data;
+        } catch (error) {
+            throw new Error(`Failed to fetch containers: ${error}`);
+        }
+    }
+
+    /**
+     * Get the first available environment ID
+     * @returns Promise resolving to the first environment ID or null if none found
+     */
+    async getFirstEnvironmentId(): Promise<number | null> {
+        try {
+            const environments = await this.getEnvironments();
+            return environments.length > 0 ? environments[0].Id : null;
+        } catch (error) {
+            console.error('Error getting first environment ID:', error);
+            return null;
+        }
+    }
 
     /**
      * Tests the connection to the Portainer API by fetching system status.

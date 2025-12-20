@@ -9,3 +9,45 @@ export interface PortainerStack {
     Name: string;
     EndpointId: number;
 }
+
+export interface PortainerContainer {
+    Id: string;
+    Names: string[];
+    Image: string;
+    State: string;
+    Status: string;
+    Created?: number;
+    StartedAt?: string;
+    FinishedAt?: string;
+    ExitCode?: number;
+    NetworkSettings?: {
+        Networks?: {
+            [key: string]: {
+                IPAddress?: string;
+                Gateway?: string;
+                MacAddress?: string;
+            };
+        };
+        Ports?: {
+            [key: string]: Array<{
+                HostIp?: string;
+                HostPort?: string;
+            }> | null;
+        };
+    };
+    Ports?: Array<{
+        IP?: string;
+        PrivatePort: number;
+        PublicPort?: number;
+        Type: string;
+    }>;
+    HostConfig?: {
+        Memory?: number;
+        CpuQuota?: number;
+        CpuPeriod?: number;
+        RestartPolicy?: {
+            Name: string;
+            MaximumRetryCount?: number;
+        };
+    };
+}
