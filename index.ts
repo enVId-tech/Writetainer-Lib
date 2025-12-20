@@ -28,6 +28,7 @@ async function main() {
     console.log('Environment ID from PortainerAuth:', portainerClient.DefaultEnvironmentId);
     console.log('PortainerAuth isValidated:', (portainerClient as any).isValidated);
     console.log('Is Connected: ', await portainerClient.testConnection());
+    console.log(`Stacks: ${portainerClient.getStacks()}`);
 }
 
 await main();

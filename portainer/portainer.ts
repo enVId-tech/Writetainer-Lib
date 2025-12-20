@@ -1,6 +1,6 @@
 
 import { PortainerAuth } from './auth.ts';
-import { type PortainerEnvironment } from './interfaces.ts';
+import type { PortainerStack, PortainerEnvironment } from './interfaces.ts';
 /**
  * Portainer API Client
  * 
@@ -65,6 +65,21 @@ export class PortainerApiClient extends PortainerAuth {
             throw error; // Re-throw to allow upstream handling
         }
     }
+
+        /**
+     * Fetches a list of all stacks managed by Portainer.
+     * @returns {Promise<PortainerStack[]>} A promise that resolves to an array of stack objects.
+     */
+    async getStacks(): Promise<PortainerStack[]> {
+        try {
+            const response = await this.axiosInstance.get<PortainerStack[]>('/api/stacks');
+            return response.data;
+        } catch (error) {
+            console.error('Failed to fetch stacks:', error);
+            throw error;
+        }
+    }
+
 
     /**
      * Tests the connection to the Portainer API by fetching system status.
