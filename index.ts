@@ -1,6 +1,6 @@
 // For interfacing with the backend API
 import dotenv from 'dotenv';
-import { PortainerApiClient } from './portainer/portainer.ts';
+import { PortainerApiClient } from './portainer/api.ts';
 
 if (!process.env.PORTAINER_URL) {
     // Suppress console output during dotenv configuration
