@@ -1,9 +1,9 @@
-import { portainerGetClient } from "./api.ts";
+import { PortainerApiGetClient } from "./api.ts";
 import type { PortainerContainer } from "./interfaces.ts";
 
 export async function getFirstEnvironmentId(): Promise<number | null> {
     try {
-        const environments = await portainerGetClient.getEnvironments();
+        const environments = await PortainerApiGetClient.instance.getEnvironments();
         return environments.length > 0 ? environments[0].Id : null;
     } catch (error) {
         console.error('Error getting first environment ID:', error);
@@ -19,7 +19,7 @@ export async function getFirstEnvironmentId(): Promise<number | null> {
  */
 export async function getContainerByName(containerName: string): Promise<PortainerContainer | null> {
     try {
-        const containers = await portainerGetClient.getContainers(true);
+        const containers = await PortainerApiGetClient.instance.getContainers(true);
 
         if (!containers) {
             console.error('No containers found in the specified environment.');
@@ -52,7 +52,7 @@ export async function getContainerByDetails(
     }
 
     try {
-        const containers = await portainerGetClient.getContainers(true);
+        const containers = await PortainerApiGetClient.instance.getContainers(true);
         if (!containers) {
             console.error('No containers found in the specified environment.');
             return null;
@@ -83,7 +83,7 @@ export async function getContainerByDetails(
  */
 export async function getStackByName(stackName: string): Promise<any | null> {
     try {
-        const stacks = await portainerGetClient.getStacks();
+        const stacks = await PortainerApiGetClient.instance.getStacks();
         if (!stacks) {
             console.error('No stacks found in the specified environment.');
             return null;

@@ -1,23 +1,25 @@
 import axios, { type AxiosInstance } from 'axios';
 import https from 'https';
 
+
 export class PortainerAuth {
-    private portainerUrl: string; // Portainer URL, must be defined
-    private apiToken: string; // Access token, must be defined for API calls
-    isValidated: boolean; // Indicates if authentication has been validated
-    axiosInstance: AxiosInstance;
+    private static instance: PortainerAuth;
+    private readonly portainerUrl: string; // Portainer URL, must be defined
+    private readonly apiKey: string; // Access token, must be defined for API calls
+    public readonly axiosInstance: AxiosInstance;
+    public isValidated: boolean; // Indicates if authentication has been validated
 
     /**
      * Constructor for PortainerAuth
      * @param portainerUrl - The URL of the Portainer instance.
-     * @param apiToken - The API token for authentication.
+     * @param apiKey - The API key for authentication.
      */
-    constructor(
+    private constructor(
         portainerUrl: string,
-        apiToken: string
+        apiKey: string
     ) {
-        this.portainerUrl = portainerUrl;
-        this.apiToken = apiToken;
+        this.portainerUrl = portainerUrl.endsWith('/') ? portainerUrl.slice(0, -1) : portainerUrl;
+        this.apiKey = apiKey;
         this.isValidated = false;
 
         // Create an Axios instance with default configurations
@@ -71,8 +73,21 @@ export class PortainerAuth {
         );
     }
 
+    // Singleton instance to improve performance by reusing the same auth instance
+    public static getInstance(): PortainerAuth {
+        if (!PortainerAuth.instance) {
+            const portainerUrl = process.env.PORTAINER_URL;
+            const apiKey = process.env.PORTAINER_API_KEY;
+            if (!portainerUrl || !apiKey) {
+                throw new Error('PORTAINER_URL and PORTAINER_API_KEY must be defined in environment variables.');
+            }
+            PortainerAuth.instance = new PortainerAuth(portainerUrl, apiKey);
+        }
+        return PortainerAuth.instance;
+    }
+
     private updateAuthHeaders() {
-        this.axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${this.apiToken}`;
+        this.axiosInstance.defaults.headers['X-API-Key'] = this.apiKey;
         this.isValidated = true;
     }
 

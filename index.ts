@@ -1,29 +1,20 @@
 // For interfacing with the backend API
-import dotenv from 'dotenv';
-import { portainerGetClient } from './portainer/api.ts';
-
-if (!process.env.PORTAINER_URL) {
-    // Suppress console output during dotenv configuration
-    const originalConsoleLog = console.log;
-    const originalConsoleInfo = console.info;
-    console.log = () => { };
-    console.info = () => { };
-
-    dotenv.config({ path: '.env', debug: false });
-
-    // Restore original console functions
-    console.log = originalConsoleLog;
-    console.info = originalConsoleInfo;
-}
+import { PortainerApiGetClient } from './portainer/api.ts';
 
 async function main() {
+    const portainerGetClient = PortainerApiGetClient.getInstance(
+        process.env.PORTAINER_URL || '',
+        process.env.PORTAINER_API_KEY || '',
+        null
+    );
+    
     console.log('Portainer URL from environment:', process.env.PORTAINER_URL);
-    console.log('Portainer API Token from environment:', process.env.PORTAINER_API_TOKEN ? '***' : 'Not Set');
+    console.log('Portainer API Token from environment:', process.env.PORTAINER_API_KEY ? '***' : 'Not Set');
 
-    console.log('Environment ID from PortainerAuth:', portainerGetClient.envId);
-    console.log('PortainerAuth isValidated:', (portainerGetClient as any).isValidated);
+    console.log('Environment ID from PortainerAuth:', await portainerGetClient.envId);
+    console.log('PortainerAuth isValidated:', await (portainerGetClient as any).auth.isValidated);
     console.log('Is Connected: ', await portainerGetClient.getStatus());
-    console.log(`Stacks: ${await portainerGetClient.getStacks()}`);
+    // console.log(`Stacks: ${await portainerGetClient.getStacks()}`);
 }
 
 await main();

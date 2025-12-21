@@ -2,38 +2,79 @@
 import { PortainerAuth } from './auth.ts';
 import type { PortainerStack, PortainerEnvironment, PortainerContainer, PortainerImage } from './interfaces.ts';
 import { getFirstEnvironmentId, getStackByName } from './utils.ts';
+import dotenv from 'dotenv';
+
+if (!process.env.PORTAINER_URL) {
+    // Suppress console output during dotenv configuration
+    const originalConsoleLog = console.log;
+    const originalConsoleInfo = console.info;
+    console.log = () => { };
+    console.info = () => { };
+
+    dotenv.config({ path: '.env', debug: false });
+
+    // Restore original console functions
+    console.log = originalConsoleLog;
+    console.info = originalConsoleInfo;
+}
+
+
 /**
  * Portainer API Client
  * 
  * Handles portainer API interactions.
  */
-class PortainerApiGetClient {
-    private environmentId: number | null = null; // Environment ID, can be null on init but must be defined when used
-    private _environmentIdValidated: boolean = false;
+export class PortainerApiGetClient {
+    public static instance: PortainerApiGetClient;
     public auth: PortainerAuth;
 
-    constructor(
-        portainerUrl: string,
-        apiToken: string,
+    private environmentId: number | null = null; // Environment ID, can be null on init but must be defined when used
+
+    private constructor(
+        private readonly portainerUrl: string,
+        private readonly apiToken: string,
         environmentId: number | null = null
     ) {
         // Creates class of upstream PortainerAuth instance
         this.environmentId = environmentId;
-        this._environmentIdValidated = environmentId !== null;
-        this.auth = new PortainerAuth(portainerUrl, apiToken);
+        this.auth = PortainerAuth.getInstance();
+    }
+
+    public static getInstance(
+        portainerUrl: string,
+        apiToken: string,
+        environmentId: number | null = null
+    ): PortainerApiGetClient {
+        if (!PortainerApiGetClient.instance) {
+            PortainerApiGetClient.instance = new PortainerApiGetClient(portainerUrl, apiToken, environmentId);
+        }
+
+        return PortainerApiGetClient.instance;
     }
 
     /**
      * Gets the default environment ID.
      */
     public get envId(): number | null {
+        if (this.environmentId === null) {
+            console.warn('Environment ID is not set, getting default environment ID.');
+            const firstEnvId = getFirstEnvironmentId().then(id => {
+                if (id === null) {
+                    console.warn('No Portainer environments found.');
+                    console.error("ALERT: Any Portainer operations requiring an environment ID will fail until one is set.");
+                    return;
+                }
+                return id;
+            });
+
+            this.environmentId = firstEnvId as unknown as number | null;
+        }
         return this.environmentId;
     }
 
     set setEnvironment(environmentId: number | null) {
         if (environmentId === null || typeof environmentId === 'number') {
             this.environmentId = environmentId;
-            this._environmentIdValidated = false; // Reset validation when changed
         }
     }
 
@@ -67,6 +108,9 @@ class PortainerApiGetClient {
             }
 
             const response = await this.auth.axiosInstance.get<PortainerEnvironment[]>('/api/endpoints');
+
+            console.log(`Fetched ${response.data.length} environments from Portainer.`);
+
             return response.data;
         } catch (error) {
             console.error('Failed to fetch environments:', error);
@@ -165,47 +209,3 @@ class PortainerApiGetClient {
     }
 }
 
-class PortainerFactory {
-    async createStack(stackData: Record<string, unknown>): Promise<Record<string, unknown>> {
-        if (portainerGetClient.envId === null) {
-            throw new Error('Environment ID is required to create a stack.');
-        }
-
-        const stackName = stackData.Name as string;
-        const composeContent = (stackData.ComposeFile || stackData.StackFileContent) as string;
-
-        if (!stackName || !composeContent) {
-            throw new Error('Stack name and compose content are required');
-        }
-
-        // Make sure the stack doesn't already exist
-        const existingStack = await getStackByName(stackName);
-        if (existingStack) {
-            console.warn(`Stack with name "${stackName}" already exists (ID: ${existingStack.Id}). Skipping creation.`);
-            return existingStack as unknown as Record<string, unknown>;
-        }
-
-        try {
-            const payload = {
-                Name: stackName,
-                StackFileContent: composeContent,
-                Env: stackData.Env || []
-            };
-
-            const response = await portainerGetClient.auth.axiosInstance.post(
-                `/api/stacks/create/standalone/string?endpointId=${portainerGetClient.envId}&type=2`,
-                payload
-            );
-            return response.data;
-        } catch (error) {
-            console.error('Failed to create stack:', error);
-            return {};
-        }
-    }
-}
-
-// Create one instance to be used globally
-export const portainerGetClient = new PortainerApiGetClient(
-    process.env.PORTAINER_URL || 'http://localhost:9000',
-    process.env.PORTAINER_API_TOKEN || ''
-);
