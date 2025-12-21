@@ -39,6 +39,11 @@ export async function getContainerByName(containerName: string): Promise<Portain
     }
 }
 
+/**
+ * Get a container by specific details
+ * @param criteria - The search criteria (image name, label, etc.)
+ * @returns Promise resolving to the container object or null if not found
+ */
 export async function getContainerByDetails(
     criteria: { image?: string; label?: string }
 ): Promise<PortainerContainer | null> {
@@ -70,3 +75,79 @@ export async function getContainerByDetails(
         return null;
     }
 }
+
+/**
+ * Get a stack by name
+ * @param stackName - The name of the stack to find
+ * @returns Promise resolving to the stack object or null if not found
+ */
+export async function getStackByName(stackName: string): Promise<any | null> {
+    try {
+        const stacks = await portainerGetClient.getStacks();
+        if (!stacks) {
+            console.error('No stacks found in the specified environment.');
+            return null;
+        }
+        const stack = stacks.find((s: any) => s.Name === stackName);
+        return stack || null;
+    } catch (error) {
+        console.error(`Failed to get stack by name "${stackName}":`, error);
+        return null;
+    }
+}
+
+/**
+ * Verify that a stack was created successfully
+ * @param stackName - The name of the stack to verify
+ * @param timeoutMs - Timeout in milliseconds (default: 5000)
+ * @returns Promise resolving to true if stack exists
+ */
+export async function verifyStackCreation(stackName: string, timeoutMs: number = 5000): Promise<boolean> {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeoutMs) {
+        try {
+            const stack = await getStackByName(stackName);
+            if (stack) {
+                console.log(`Stack "${stackName}" verified successfully`);
+                return true;
+            }
+        } catch (error) {
+            console.warn('Error during stack verification:', error);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    console.warn(`Stack verification timed out for "${stackName}"`);
+    return false;
+}
+
+/**
+ * Verify that a container was created successfully
+ * @param containerName - The name of the container to verify
+ * @param timeoutMs - Timeout in milliseconds (default: 5000)
+ * @returns Promise resolving to true if container exists
+ */
+export async function verifyContainerCreation(containerName: string, timeoutMs: number = 5000): Promise<boolean> {
+        const startTime = Date.now();
+
+        while (Date.now() - startTime < timeoutMs) {
+            try {
+                const container = await getContainerByName(containerName);
+
+                if (container) {
+                    console.log(`Container "${containerName}" verified successfully (State: ${container.State})`);
+                    return true;
+                }
+            } catch (error) {
+                console.warn('Error during container verification:', error);
+            }
+
+            // Wait 1 second before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        console.warn(`Container verification timed out for "${containerName}"`);
+        return false;
+    }
