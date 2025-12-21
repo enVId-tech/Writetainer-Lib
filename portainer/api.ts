@@ -153,6 +153,16 @@ class PortainerApiGetClient {
             throw error;
         }
     }
+
+    async getStatus(): Promise<any> {
+        try {
+            const response = await this.auth.axiosInstance.get('/api/system/status');
+            return response.data;
+        } catch (error) {
+            console.error('Failed to fetch system status:', error);
+            throw error;
+        }
+    }
 }
 
 // Create one instance to be used globally

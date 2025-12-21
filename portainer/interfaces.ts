@@ -14,6 +14,7 @@ export interface PortainerContainer {
     Id: string;
     Names: string[];
     Image: string;
+    Labels: { [key: string]: string };
     State: string;
     Status: string;
     Created?: number;
