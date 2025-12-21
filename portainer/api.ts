@@ -30,7 +30,7 @@ class PortainerApiGetClient {
         return this.environmentId;
     }
 
-    set DefaultEnvironmentId(environmentId: number | null) {
+    set setEnvironment(environmentId: number | null) {
         if (environmentId === null || typeof environmentId === 'number') {
             this.environmentId = environmentId;
             this._environmentIdValidated = false; // Reset validation when changed
@@ -42,16 +42,16 @@ class PortainerApiGetClient {
      * @param environmentId - The ID of the environment to fetch.
      * @returns {Promise<PortainerEnvironment>} A promise that resolves to the environment object.
      */
-    async getEnvironment(environmentId: number): Promise<PortainerEnvironment> {
+    async getEnvironment(): Promise<PortainerEnvironment> {
         try {
             if (!this.auth.isValidated) {
                 throw new Error('Authentication not validated. Cannot fetch environment.');
             }
 
-            const response = await this.auth.axiosInstance.get<PortainerEnvironment>(`/api/endpoints/${environmentId}`);
+            const response = await this.auth.axiosInstance.get<PortainerEnvironment>(`/api/endpoints/${this.environmentId}`);
             return response.data;
         } catch (error) {
-            console.error(`Failed to fetch environment ${environmentId}:`, error);
+            console.error(`Failed to fetch environment ${this.environmentId}:`, error);
             throw error;
         }
     }
@@ -121,15 +121,15 @@ class PortainerApiGetClient {
      * @param environmentId - The ID of the Portainer environment.
      * @returns {Promise<PortainerContainer>} A promise that resolves to the container object.
      */
-    async getContainerDetails(containerId: string, environmentId: number): Promise<PortainerContainer> {
+    async getContainerDetails(containerId: string): Promise<PortainerContainer> {
         if (!containerId) {
             throw new Error('Container ID is required to fetch container details.');
         }
         try {
-            const response = await this.auth.axiosInstance.get<PortainerContainer>(`/api/endpoints/${environmentId}/docker/containers/${containerId}/json`);
+            const response = await this.auth.axiosInstance.get<PortainerContainer>(`/api/endpoints/${this.environmentId}/docker/containers/${containerId}/json`);
             return response.data;
         } catch (error) {
-            console.error(`Failed to fetch details for container ${containerId} in environment ${environmentId}:`, error);
+            console.error(`Failed to fetch details for container ${containerId} in environment ${this.environmentId}:`, error);
             throw error;
         }
     }
@@ -140,22 +140,23 @@ class PortainerApiGetClient {
      * @param environmentId - The ID of the Portainer environment.
      * @returns {Promise<PortainerImage[]>} A promise that resolves to an array of image objects.
      */
-    async getImages(environmentId: number): Promise<PortainerImage[]> {
-        if (environmentId === null) {
+    async getImages(): Promise<PortainerImage[]> {
+        if (this.environmentId === null) {
             throw new Error('Environment ID is required to fetch images.');
         }
+
         try {
-            const response = await this.auth.axiosInstance.get<PortainerImage[]>(`/api/endpoints/${environmentId}/docker/images/json`);
+            const response = await this.auth.axiosInstance.get<PortainerImage[]>(`/api/endpoints/${this.environmentId}/docker/images/json`);
             return response.data;
         } catch (error) {
-            console.error(`Failed to fetch images for environment ${environmentId}:`, error);
+            console.error(`Failed to fetch images for environment ${this.environmentId}:`, error);
             throw error;
         }
     }
 }
 
 // Create one instance to be used globally
-export const portainerClient = new PortainerApiGetClient(
+export const portainerGetClient = new PortainerApiGetClient(
     process.env.PORTAINER_URL || 'http://localhost:9000',
     process.env.PORTAINER_API_TOKEN || ''
 );
