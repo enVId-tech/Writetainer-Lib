@@ -65,3 +65,10 @@ export interface PortainerStack {
     Name: string;
     EndpointId: number;
 }
+
+export interface PortainerStackContent {
+    Name: string;
+    ComposeFile: string | any;
+    Env?: Array<{ name: string; value: string }>
+    FromAppTemplate?: boolean;
+}

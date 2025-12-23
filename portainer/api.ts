@@ -31,8 +31,6 @@ export class PortainerApiGetClient {
     private environmentId: number | null = null; // Environment ID, can be null on init but must be defined when used
 
     private constructor(
-        private readonly portainerUrl: string,
-        private readonly apiToken: string,
         environmentId: number | null = null
     ) {
         // Creates class of upstream PortainerAuth instance
@@ -41,12 +39,10 @@ export class PortainerApiGetClient {
     }
 
     public static getInstance(
-        portainerUrl: string,
-        apiToken: string,
         environmentId: number | null = null
     ): PortainerApiGetClient {
         if (!PortainerApiGetClient.instance) {
-            PortainerApiGetClient.instance = new PortainerApiGetClient(portainerUrl, apiToken, environmentId);
+            PortainerApiGetClient.instance = new PortainerApiGetClient(environmentId);
         }
 
         return PortainerApiGetClient.instance;
@@ -55,20 +51,26 @@ export class PortainerApiGetClient {
     /**
      * Gets the default environment ID.
      */
-    public get envId(): number | null {
+    private get envId(): number | null {
+        return this.environmentId;
+    }
+
+    public async ensureEnvId(): Promise<number | null> {
         if (this.environmentId === null) {
             console.warn('Environment ID is not set, getting default environment ID.');
             const firstEnvId = getFirstEnvironmentId().then(id => {
-                if (id === null) {
+                if (id === null || id === undefined) {
                     console.warn('No Portainer environments found.');
                     console.error("ALERT: Any Portainer operations requiring an environment ID will fail until one is set.");
                     return;
                 }
                 return id;
-            });
+            })
+
 
             this.environmentId = firstEnvId as unknown as number | null;
         }
+
         return this.environmentId;
     }
 
