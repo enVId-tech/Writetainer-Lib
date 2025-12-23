@@ -46,6 +46,8 @@ async function main() {
         ComposeFile: stackContent,
         Env: []
     })
+
+    await PortainerApi.instance.deleteStack("test2-minecraftserver".toLowerCase());
 }
 
 await main();

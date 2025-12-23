@@ -96,6 +96,21 @@ export async function getStackByName(stackName: string): Promise<any | null> {
     }
 }
 
+export async function getStackById(stackid: number, environmentId: number) {
+    try {
+        const stacks = await PortainerApi.instance.getStacks();
+        if (!stacks) {
+            console.error('No stacks found in the specified environment.');
+            return null;
+        }
+        const stack = stacks.find((s: any) => s.Id === stackid && s.EndpointId === environmentId);
+        return stack || null;
+    } catch (error) {
+        console.error(`Failed to get stack by id "${stackid}" and environmentId "${environmentId}":`, error);
+        return null;
+    }
+}
+
 /**
  * Verify that a stack was created successfully
  * @param stackName - The name of the stack to verify

@@ -106,15 +106,15 @@ export class PortainerFactory {
     }
 
     /**
- * Creates a container based on a given compose format
- * Valid for Portainer API >2.19.x
- * @param stackData - An object containing container creation data
- * @param stackData.Name - The name of the container, immutable after creation
- * @param stackData.ContainerPayload - The Docker compose file as a single string, must be valid Docker notation
- * @param maxRetryCount - Optional: Number of times to retry making the stack if creation fails
- * @param timeoutMs - Optional: Time between each retry attempt (in ms)
- * @returns {Promise<Record<string, unknown>>} A promise that resolves to the created stack object or an empty object on failure.
- */
+     * Creates a container based on a given compose format
+     * Valid for Portainer API >2.19.x
+     * @param stackData - An object containing container creation data
+     * @param stackData.Name - The name of the container, immutable after creation
+     * @param stackData.ContainerPayload - The Docker compose file as a single string, must be valid Docker notation
+     * @param maxRetryCount - Optional: Number of times to retry making the stack if creation fails
+     * @param timeoutMs - Optional: Time between each retry attempt (in ms)
+     * @returns {Promise<Record<string, unknown>>} A promise that resolves to the created stack object or an empty object on failure.
+     */
     async createContainer(stackData: Record<string, unknown>, maxRetryCount?: number, timeoutMs?: number): Promise<Record<string, unknown>> {
         const stackName = stackData.Name as string;
         const composeContent = (stackData.ContainerPayload) as string;
