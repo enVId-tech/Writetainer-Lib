@@ -106,13 +106,11 @@ export class PortainerFactory {
     }
 
     /**
- * Creates a stack based on a given compose format
+ * Creates a container based on a given compose format
  * Valid for Portainer API >2.19.x
- * @param stackData - An object containing stack creation data
- * @param stackData.Name - The name of the stack, immutable after creation
+ * @param stackData - An object containing container creation data
+ * @param stackData.Name - The name of the container, immutable after creation
  * @param stackData.ContainerPayload - The Docker compose file as a single string, must be valid Docker notation
- * @param stackData.Env - Optional: An array of objects with a string key and string value. Can be omitted if none are present.
- * @param stackData.FromAppTemplate - Optional: Marks if current stack should be an app template.
  * @param maxRetryCount - Optional: Number of times to retry making the stack if creation fails
  * @param timeoutMs - Optional: Time between each retry attempt (in ms)
  * @returns {Promise<Record<string, unknown>>} A promise that resolves to the created stack object or an empty object on failure.
