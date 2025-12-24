@@ -1,5 +1,5 @@
 import { logError } from "../../logger.ts";
-import { Constructor, PortainerContainer, PortainerImage, PortainerStack } from "../types.ts";
+import type { Constructor, PortainerContainer, PortainerImage, PortainerStack } from "../types.ts";
 
 interface RFMixin {
     auth: {

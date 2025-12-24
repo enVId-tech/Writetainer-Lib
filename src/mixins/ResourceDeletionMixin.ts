@@ -1,5 +1,5 @@
 import { logError, logInfo, logWarn } from "../../logger.ts";
-import { Constructor } from "../types.ts";
+import type { Constructor } from "../types.ts";
 import { getStackById, getStackByName } from "../utils.ts";
 
 interface RDMixin {

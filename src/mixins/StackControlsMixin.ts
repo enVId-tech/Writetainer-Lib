@@ -1,5 +1,5 @@
 import { logError, logInfo } from "../../logger.ts";
-import { Constructor } from "../types";
+import type { Constructor } from "../types.ts";
 
 interface SCtrlsMixin {
     auth: {

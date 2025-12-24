@@ -1,5 +1,3 @@
-import { AxiosInstance } from "axios";
-
 export interface PortainerEnvironment {
     Id: number;
     Name: string;
@@ -76,4 +74,3 @@ export interface PortainerStackContent {
 }
 
 export type Constructor<T = {}> = new (...args: any[]) => T;
-
