@@ -319,6 +319,11 @@ export class PortainerApi {
         }
     }
 
+    /**
+     * Start a container in a specific environment
+     * @param containerId - The ID of the container to start
+     * @param environmentId - Optional: The ID of the Portainer environment
+     */
     async startContainer(containerId: string, environmentId?: number | null): Promise<void> {
         if (environmentId === null || environmentId === undefined) {
             environmentId = await this.ensureEnvId();
@@ -333,6 +338,29 @@ export class PortainerApi {
             console.log(`Container ${containerId} started successfully.`);
         } catch (error) {
             console.error(`Failed to start container ${containerId}:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Stop a container in a specific environment
+     * @param containerId - The ID of the container to stop
+     * @param environmentId - Optional: The ID of the Portainer environment
+     */
+    async stopContainer(containerId: string, environmentId?: number | null): Promise<void> {
+        if (environmentId === null || environmentId === undefined) {
+            environmentId = await this.ensureEnvId();
+        }
+
+        if (environmentId === null) {
+            throw new Error('No Portainer environments found. Cannot stop container.');
+        }
+
+        try {
+            await this.auth.axiosInstance.post(`/api/endpoints/${environmentId}/docker/containers/${containerId}/stop`);
+            console.log(`Container ${containerId} stopped successfully.`);
+        } catch (error) {
+            console.error(`Failed to stop container ${containerId}:`, error);
             throw error;
         }
     }
