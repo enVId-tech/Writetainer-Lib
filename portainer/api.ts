@@ -497,4 +497,22 @@ export class PortainerApi {
         }
     }
 
+    async restartContainer(containerId: string, environmentId?: number | null): Promise<void> {
+        if (environmentId === null || environmentId === undefined) {
+            environmentId = await this.ensureEnvId();
+        }
+
+        if (environmentId === null) {
+            throw new Error('No Portainer environments found. Cannot restart container.');
+        }
+
+        try {
+            console.log(`Restarting container ${containerId}...`);
+            await this.auth.axiosInstance.post(`/api/endpoints/${environmentId}/docker/containers/${containerId}/restart`);
+            console.log('Container restarted successfully');
+        } catch (error) {
+            console.error(`Failed to restart container ${containerId}:`, error);
+            throw error;
+        }
+    }
 }
