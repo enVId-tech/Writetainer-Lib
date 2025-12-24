@@ -364,5 +364,35 @@ export class PortainerApi {
             throw error;
         }
     }
-}
+    /**
+     * Remove a container
+     * @param containerId - The ID of the container to remove
+     * @param environmentId - The ID of the Portainer environment
+     * @param force - Force removal of running container
+     * @param removeVolumes - Remove associated volumes
+     * @returns Promise resolving when container is removed
+     */
+    async removeContainer(containerId: string, environmentId?: number | null, force: boolean = false, removeVolumes: boolean = false): Promise<void> {
+        if (environmentId === null || environmentId === undefined) {
+            environmentId = await this.ensureEnvId();
+        }
 
+        if (environmentId === null) {
+            throw new Error('No Portainer environments found. Cannot remove container.');
+        }
+
+        try {
+            console.log(`🗑️ Removing container ${containerId}...`);
+            const params = new URLSearchParams();
+            if (force) params.append('force', 'true');
+            if (removeVolumes) params.append('v', 'true');
+
+            const url = `/api/endpoints/${environmentId}/docker/containers/${containerId}?${params.toString()}`;
+            await this.auth.axiosInstance.delete(url);
+            console.log('Container removed successfully');
+        } catch (error) {
+            console.error(`Failed to remove container ${containerId}:`, error);
+            throw error;
+        }
+    }
+}
