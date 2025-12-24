@@ -23,8 +23,10 @@
     "dotenv": "^17.2.3"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
     "@types/debug": "^4.1.12",
-    "@types/node": "^25.0.3"
+    "@types/node": "^25.0.3",
+    "vitest": "^4.0.16"
   },
   "type": "module"
 }

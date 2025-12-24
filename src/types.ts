@@ -72,3 +72,5 @@ export interface PortainerStackContent {
     Env?: Array<{ name: string; value: string }>
     FromAppTemplate?: boolean;
 }
+
+export type Constructor<T = {}> = new (...args: any[]) => T;

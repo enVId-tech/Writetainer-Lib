@@ -1,5 +1,5 @@
 import { PortainerApi } from "./api.ts";
-import type { PortainerContainer } from "./interfaces.ts";
+import type { PortainerContainer } from "./types.ts";
 import { logInfo, logWarn, logError } from "../logger.ts";
 
 export async function getFirstEnvironmentId(): Promise<number | null> {
