@@ -1,7 +1,7 @@
 // For interfacing with the backend API
 import { PortainerApi } from './src/api.ts';
 import { PortainerFactory } from './src/factory.ts';
-import { logInfo } from './logger.ts';
+import { logInfo, logWarn, logError } from './logger.ts';
 import dotenv from 'dotenv';
 
 dotenv.config({ path: './.env' });
@@ -10,7 +10,6 @@ async function main() {
     const portainerGetClient = PortainerApi.getInstance(
         null
     );
-
 
     logInfo('Portainer URL from environment:', process.env.PORTAINER_URL);
     logInfo('Portainer API Token from environment:', process.env.PORTAINER_API_KEY ? '***' : 'Not Set');

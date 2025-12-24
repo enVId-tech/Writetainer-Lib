@@ -17,7 +17,7 @@ const error = debug('portainer-api:error')
 const DefaultLogger: Logger = {
     info: (message: string, ...args: any[]) => {
         info(message, ...args);
-        info.color = '4';
+        info.color = '0';
     },
     warn: (message: string, ...args: any[]) => {
         warn(message, ...args);
