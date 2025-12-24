@@ -29,6 +29,10 @@ export class PortainerApi {
     public auth: PortainerAuth;
     private environmentId: number | null = null; // Environment ID, can be null on init but must be defined when used
 
+    /**
+     * Constructor for PortainerApi
+     * @param environmentId - Optional: The ID of the Portainer environment.
+     */
     private constructor(
         environmentId: number | null = null
     ) {
@@ -37,6 +41,11 @@ export class PortainerApi {
         this.auth = PortainerAuth.getInstance();
     }
 
+    /**
+     * A publically accessible singleton instance of PortainerApi
+     * @param environmentId - Optional: Environment Id for instance
+     * @returns {PortainerApi} The singleton instance of PortainerApi
+     */
     public static getInstance(
         environmentId: number | null = null
     ): PortainerApi {
@@ -54,6 +63,10 @@ export class PortainerApi {
         return this.environmentId;
     }
 
+    /**
+     * Ensures that an environment ID is set, fetching the first available if not.
+     * @returns {Promise<number | null>} The environment ID.
+     */
     public async ensureEnvId(): Promise<number | null> {
         if (this.environmentId === null) {
             console.warn('Environment ID is not set, getting default environment ID.');
@@ -82,30 +95,30 @@ export class PortainerApi {
     /**
      * Fetches details of a specific Portainer environment.
      * @param environmentId - The ID of the environment to fetch.
-     * @returns {Promise<PortainerEnvironment>} A promise that resolves to the environment object.
+     * @returns {Promise<PortainerEnvironment | undefined>} A promise that resolves to the environment object.
      */
-    async getEnvironment(): Promise<PortainerEnvironment> {
+    async getEnvironment(): Promise<PortainerEnvironment | undefined> {
         try {
             if (!this.auth.isValidated) {
-                throw new Error('Authentication not validated. Cannot fetch environment.');
+                return undefined;
             }
 
             const response = await this.auth.axiosInstance.get<PortainerEnvironment>(`/api/endpoints/${this.environmentId}`);
             return response.data;
         } catch (error) {
             console.error(`Failed to fetch environment ${this.environmentId}:`, error);
-            throw error;
+            return undefined;
         }
     }
 
     /**
      * Fetches a list of all Portainer environments (endpoints).
-     * @returns {Promise<PortainerEnvironment[]>} A promise that resolves to an array of environment objects.
+     * @returns {Promise<PortainerEnvironment[] | undefined>} A promise that resolves to an array of environment objects.
      */
-    async getEnvironments(): Promise<PortainerEnvironment[]> {
+    async getEnvironments(): Promise<PortainerEnvironment[] | undefined> {
         try {
             if (!this.auth.isValidated) {
-                throw new Error('Authentication not validated. Cannot fetch environments.');
+                return undefined;
             }
 
             const response = await this.auth.axiosInstance.get<PortainerEnvironment[]>('/api/endpoints');
@@ -115,21 +128,21 @@ export class PortainerApi {
             return response.data;
         } catch (error) {
             console.error('Failed to fetch environments:', error);
-            throw error; // Re-throw to allow upstream handling
+            return undefined;
         }
     }
 
     /**
  * Fetches a list of all stacks managed by Portainer.
- * @returns {Promise<PortainerStack[]>} A promise that resolves to an array of stack objects.
+ * @returns {Promise<PortainerStack[] | undefined>} A promise that resolves to an array of stack objects.
  */
-    async getStacks(): Promise<PortainerStack[]> {
+    async getStacks(): Promise<PortainerStack[] | undefined> {
         try {
             const response = await this.auth.axiosInstance.get<PortainerStack[]>('/api/stacks');
             return response.data;
         } catch (error) {
             console.error('Failed to fetch stacks:', error);
-            throw error;
+            return undefined;
         }
     }
 
@@ -138,7 +151,7 @@ export class PortainerApi {
      * This proxies the Docker API's /containers/json endpoint.
      * @param includeAll - Whether to include all containers (running, stopped, etc.).
      * @param environmentId - Optional: The ID of the Portainer environment. Defaults to `this.defaultEnvironmentId`.
-     * @returns {Promise<PortainerContainer[]>} A promise that resolves to an array of container objects.
+     * @returns {Promise<PortainerContainer[] | undefined>} A promise that resolves to an array of container objects.
      */
     async getContainers(includeAll: boolean, environmentId?: number | null): Promise<PortainerContainer[] | undefined> {
         // If no environment ID is provided and no default is set, try to get the first one
@@ -164,7 +177,7 @@ export class PortainerApi {
      * Fetches detailed information about a specific container within a Portainer environment.
      * @param containerId - The ID of the container to fetch details for.
      * @param environmentId - Optional: The ID of the Portainer environment, uses the set environmentId by default
-     * @returns {Promise<PortainerContainer>} A promise that resolves to the container object.
+     * @returns {Promise<PortainerContainer | undefined>} A promise that resolves to the container object.
      */
     async getContainerDetails(identifier: string, environmentId?: number | null): Promise<PortainerContainer | undefined> {
         if (environmentId === null || environmentId === undefined) {
@@ -216,15 +229,16 @@ export class PortainerApi {
      * Fetches a list of all Docker images within a specific Portainer environment.
      * This proxies the Docker API's /images/json endpoint.
      * @param environmentId - Optional: The ID of the Portainer environment.
-     * @returns {Promise<PortainerImage[]>} A promise that resolves to an array of image objects.
+     * @returns {Promise<PortainerImage[] | undefined>} A promise that resolves to an array of image objects.
      */
-    async getImages(environmentId?: number | null): Promise<PortainerImage[]> {
+    async getImages(environmentId?: number | null): Promise<PortainerImage[] | undefined> {
         if (environmentId === null || environmentId === undefined) {
             environmentId = await this.ensureEnvId();
         }
 
         if (environmentId === null) {
-            throw new Error('No Portainer environments found. Cannot fetch images.');
+            console.error('No Portainer environments found. Cannot fetch images.');
+            return undefined;
         }
 
         try {
@@ -232,17 +246,17 @@ export class PortainerApi {
             return response.data;
         } catch (error) {
             console.error(`Failed to fetch images for environment ${environmentId}:`, error);
-            throw error;
+            return undefined;
         }
     }
 
-    async getStatus(): Promise<any> {
+    async getStatus(): Promise<any | undefined> {
         try {
             const response = await this.auth.axiosInstance.get('/api/system/status');
             return response.data;
         } catch (error) {
             console.error('Failed to fetch system status:', error);
-            throw error;
+            return undefined;
         }
     }
 
@@ -250,21 +264,23 @@ export class PortainerApi {
      * Clean up any existing container with the same name
      * @param containerName - The name of the container to clean up
      * @param environmentId - Optional: The ID of the Portainer environment
+     * @returns {Promise<boolean>} Promise resolving to true if a container was cleaned up, false otherwise
      */
-    async cleanupExistingContainer(containerName: string, environmentId?: number | null): Promise<void> {
+    async cleanupExistingContainer(containerName: string, environmentId?: number | null): Promise<boolean> {
         try {
             if (environmentId === null || environmentId === undefined) {
                 environmentId = await this.ensureEnvId();
             }
 
             if (environmentId === null) {
-                throw new Error('No Portainer environments found. Cannot cleanup container.');
+                console.error('No Portainer environments found. Cannot cleanup container.');
+                return false;
             }
 
             const containers = await this.getContainers(true);
             if (!containers) {
                 console.error("No containers found, canceled cleanup operation.")
-                return
+                return false;
             }
             const existingContainer = containers.find(c =>
                 c.Names.some(name => name.includes(containerName)) ||
@@ -282,9 +298,12 @@ export class PortainerApi {
                 // Remove the container
                 await this.auth.axiosInstance.delete(`/api/endpoints/${environmentId}/docker/containers/${existingContainer.Id}`);
                 console.log('Container removed');
+                return true;
             }
+            return false; // No existing container found
         } catch (error) {
             console.warn(`Warning: Failed to cleanup existing container "${containerName}":`, error);
+            return false;
         }
     }
 
@@ -292,43 +311,46 @@ export class PortainerApi {
      * Delete a stack from Portainer using the given stack id.
      * @param stackId - The ID of the stack to delete
      * @param environmentId - Optional: The ID of the Portainer environment
-     * @returns Promise resolving to the delete operation result
+     * @returns {Promise<Record<string, unknown> | undefined>} Promise resolving to the delete operation result
      */
-    deleteStack(stackId: number, environmentId?: number | null): Promise<Record<string, unknown>>;
+    deleteStack(stackId: number, environmentId?: number | null): Promise<Record<string, unknown> | undefined>;
     /**
     * Delete a stack from Portainer using the given stack id.
     * @param stackId - The ID of the stack to delete
     * @param environmentId - Optional: The ID of the Portainer environment
-    * @returns Promise resolving to the delete operation result
+    * @returns {Promise<Record<string, unknown> | undefined>} Promise resolving to the delete operation result
     */
-    deleteStack(stackName: string, environmentId?: number | null): Promise<Record<string, unknown>>;
+    deleteStack(stackName: string, environmentId?: number | null): Promise<Record<string, unknown> | undefined>;
 
     /**
      * Delete a stack from Portainer using the given stack id.
      * @param stackId - The ID of the stack to delete
      * @param environmentId - Optional: The ID of the Portainer environment
-     * @returns Promise resolving to the delete operation result
+     * @returns {Promise<Record<string, unknown> | undefined>} Promise resolving to the delete operation result
      */
-    async deleteStack(stackId: number | string, environmentId?: number | null): Promise<Record<string, unknown>> {
+    async deleteStack(stackId: number | string, environmentId?: number | null): Promise<Record<string, unknown> | undefined> {
         if (environmentId === null || environmentId === undefined) {
             environmentId = await this.ensureEnvId();
         }
 
         if (environmentId === null) {
-            throw new Error('No Portainer environments found. Cannot delete stack.');
+            console.error('No Portainer environments found. Cannot delete stack.');
+            return undefined;
         }
 
         if (typeof stackId === "number") {
             const stack = await getStackById(stackId, environmentId);
             if (!stack) {
-                throw new Error(`Stack ID ${stackId} does not exist in environment ${environmentId}`);
+                console.error(`Stack ID ${stackId} does not exist in environment ${environmentId}`);
+                return undefined;
             }
         }
 
         if (typeof stackId === "string") {
             const stack = await getStackByName(stackId);
             if (!stack) {
-                throw new Error(`Stack with name "${stackId}" does not exist in environment ${environmentId}`);
+                console.error(`Stack with name "${stackId}" does not exist in environment ${environmentId}`);
+                return undefined;
             }
             stackId = stack.Id;
         }
@@ -340,7 +362,7 @@ export class PortainerApi {
             return response.data;
         } catch (error) {
             console.error(`Failed to delete stack ${stackId}:`, error);
-            throw error;
+            return undefined;
         }
     }
 
@@ -348,22 +370,25 @@ export class PortainerApi {
      * Start a container in a specific environment
      * @param containerId - The ID of the container to start
      * @param environmentId - Optional: The ID of the Portainer environment
+     * @returns {Promise<boolean>} Promise resolving when container is started
      */
-    async startContainer(containerId: string, environmentId?: number | null): Promise<void> {
+    async startContainer(containerId: string, environmentId?: number | null): Promise<boolean> {
         if (environmentId === null || environmentId === undefined) {
             environmentId = await this.ensureEnvId();
         }
 
         if (environmentId === null) {
-            throw new Error('No Portainer environments found. Cannot start container.');
+            console.error('No Portainer environments found. Cannot start container.');
+            return false;
         }
 
         try {
             await this.auth.axiosInstance.post(`/api/endpoints/${environmentId}/docker/containers/${containerId}/start`);
             console.log(`Container ${containerId} started successfully.`);
+            return true;
         } catch (error) {
             console.error(`Failed to start container ${containerId}:`, error);
-            throw error;
+            return false;
         }
     }
 
@@ -371,22 +396,25 @@ export class PortainerApi {
      * Stop a container in a specific environment
      * @param containerId - The ID of the container to stop
      * @param environmentId - Optional: The ID of the Portainer environment
+     * @returns {Promise<boolean>} Promise resolving when container is stopped
      */
-    async stopContainer(containerId: string, environmentId?: number | null): Promise<void> {
+    async stopContainer(containerId: string, environmentId?: number | null): Promise<boolean> {
         if (environmentId === null || environmentId === undefined) {
             environmentId = await this.ensureEnvId();
         }
 
         if (environmentId === null) {
-            throw new Error('No Portainer environments found. Cannot stop container.');
+            console.error('No Portainer environments found. Cannot stop container.');
+            return false;
         }
 
         try {
             await this.auth.axiosInstance.post(`/api/endpoints/${environmentId}/docker/containers/${containerId}/stop`);
             console.log(`Container ${containerId} stopped successfully.`);
+            return true;
         } catch (error) {
             console.error(`Failed to stop container ${containerId}:`, error);
-            throw error;
+            return false;
         }
     }
     /**
@@ -395,15 +423,16 @@ export class PortainerApi {
      * @param environmentId - The ID of the Portainer environment
      * @param force - Force removal of running container
      * @param removeVolumes - Remove associated volumes
-     * @returns Promise resolving when container is removed
+     * @returns {Promise<boolean>} Promise resolving when container is removed
      */
-    async removeContainer(containerId: string, environmentId?: number | null, force: boolean = false, removeVolumes: boolean = false): Promise<void> {
+    async removeContainer(containerId: string, environmentId?: number | null, force: boolean = false, removeVolumes: boolean = false): Promise<boolean> {
         if (environmentId === null || environmentId === undefined) {
             environmentId = await this.ensureEnvId();
         }
 
         if (environmentId === null) {
-            throw new Error('No Portainer environments found. Cannot remove container.');
+            console.error('No Portainer environments found. Cannot remove container.');
+            return false;
         }
 
         try {
@@ -415,9 +444,10 @@ export class PortainerApi {
             const url = `/api/endpoints/${environmentId}/docker/containers/${containerId}?${params.toString()}`;
             await this.auth.axiosInstance.delete(url);
             console.log('Container removed successfully');
+            return true;
         } catch (error) {
             console.error(`Failed to remove container ${containerId}:`, error);
-            throw error;
+            return false;
         }
     }
 
@@ -426,24 +456,26 @@ export class PortainerApi {
      * @param containerId - The ID of the container to kill
      * @param environmentId - Optional: The ID of the Portainer environment
      * @param signal - Kill signal (default: SIGKILL)
-     * @returns Promise resolving when container is killed
+     * @returns {Promise<boolean>} Promise resolving when container is killed
      */
-    async killContainer(containerId: string, environmentId?: number | null, signal: string = 'SIGKILL'): Promise<void> {
+    async killContainer(containerId: string, environmentId?: number | null, signal: string = 'SIGKILL'): Promise<boolean> {
         if (environmentId === null || environmentId === undefined) {
             environmentId = await this.ensureEnvId();
         }
 
         if (environmentId === null) {
-            throw new Error('No Portainer environments found. Cannot kill container.');
+            console.error('No Portainer environments found. Cannot kill container.');
+            return false;
         }
 
         try {
             console.log(`Killing container ${containerId} with signal ${signal}...`);
             await this.auth.axiosInstance.post(`/api/endpoints/${environmentId}/docker/containers/${containerId}/kill?signal=${signal}`);
             console.log('Container killed successfully');
+            return true;
         } catch (error) {
             console.error(`Failed to kill container ${containerId}:`, error);
-            throw error;
+            return false;
         }
     }
 
@@ -451,24 +483,26 @@ export class PortainerApi {
      * Pause a container
      * @param containerId - The ID of the container to pause
      * @param environmentId - The ID of the Portainer environment
-     * @returns Promise resolving when container is paused
+     * @returns {Promise<boolean>} Promise resolving when container is paused
      */
-    async pauseContainer(containerId: string, environmentId?: number | null): Promise<void> {
+    async pauseContainer(containerId: string, environmentId?: number | null): Promise<boolean> {
         if (environmentId === null || environmentId === undefined) {
             environmentId = await this.ensureEnvId();
         }
 
         if (environmentId === null) {
-            throw new Error('No Portainer environments found. Cannot pause container.');
+            console.error('No Portainer environments found. Cannot pause container.');
+            return false;
         }
 
         try {
             console.log(`Pausing container ${containerId}...`);
             await this.auth.axiosInstance.post(`/api/endpoints/${environmentId}/docker/containers/${containerId}/pause`);
             console.log('Container paused successfully');
+            return true;
         } catch (error) {
             console.error(`Failed to pause container ${containerId}:`, error);
-            throw error;
+            return false;
         }
     }
 
@@ -476,43 +510,81 @@ export class PortainerApi {
      * Unpause a container
      * @param containerId - The ID of the container to unpause
      * @param environmentId - The ID of the Portainer environment
-     * @returns Promise resolving when container is unpaused
+     * @returns {Promise<boolean>} Promise resolving when container is unpaused
      */
-    async unpauseContainer(containerId: string, environmentId?: number | null): Promise<void> {
+    async unpauseContainer(containerId: string, environmentId?: number | null): Promise<boolean> {
         if (environmentId === null || environmentId === undefined) {
             environmentId = await this.ensureEnvId();
         }
 
         if (environmentId === null) {
-            throw new Error('No Portainer environments found. Cannot unpause container.');
+            console.error('No Portainer environments found. Cannot unpause container.');
+            return false;
         }
 
         try {
             console.log(`Unpausing container ${containerId}...`);
             await this.auth.axiosInstance.post(`/api/endpoints/${environmentId}/docker/containers/${containerId}/unpause`);
             console.log('Container unpaused successfully');
+            return true;
         } catch (error) {
             console.error(`Failed to unpause container ${containerId}:`, error);
-            throw error;
+            return false;
         }
     }
 
-    async restartContainer(containerId: string, environmentId?: number | null): Promise<void> {
+    /**
+     * Restart a container
+     * @param containerId - The ID of the container to restart
+     * @param environmentId - Optional: The ID of the Portainer environment
+     * @param timeout - Optional: Timeout in seconds before forcefully killing the container (in ms)
+     * @returns {Promise<boolean>} Promise resolving when container is restarted
+     */
+    async restartContainer(containerId: string, environmentId?: number | null, timeout: number = 10000): Promise<boolean> {
         if (environmentId === null || environmentId === undefined) {
             environmentId = await this.ensureEnvId();
         }
 
         if (environmentId === null) {
-            throw new Error('No Portainer environments found. Cannot restart container.');
+            console.error('No Portainer environments found. Cannot restart container.');
+            return false;
         }
 
         try {
             console.log(`Restarting container ${containerId}...`);
-            await this.auth.axiosInstance.post(`/api/endpoints/${environmentId}/docker/containers/${containerId}/restart`);
+            await this.auth.axiosInstance.post(`/api/endpoints/${environmentId}/docker/containers/${containerId}/restart?t=${(timeout / 1000).toPrecision(2)}`);
             console.log('Container restarted successfully');
+            return true;
         } catch (error) {
             console.error(`Failed to restart container ${containerId}:`, error);
-            throw error;
+            return false;
+        }
+    }
+
+    /**
+     * Start a stack
+     * @param stackId - The ID of the stack to start
+     * @param environmentId - The ID of the Portainer environment
+     * @returns {Promise<boolean>} Promise resolving when stack is started
+     */
+    async startStack(stackId: number, environmentId?: number | null): Promise<boolean> {
+        if (environmentId === null || environmentId === undefined) {
+            environmentId = await this.ensureEnvId();
+        }
+
+        if (environmentId === null) {
+            console.error('No Portainer environments found. Cannot start stack.');
+            return false;
+        }
+
+        try {
+            console.log(`▶️ Starting stack ${stackId}...`);
+            await this.auth.axiosInstance.post(`/api/stacks/${stackId}/start?endpointId=${environmentId}`);
+            console.log('Stack started successfully');
+            return true;
+        } catch (error) {
+            console.error(`Failed to start stack ${stackId}:`, error);
+            return false;
         }
     }
 }

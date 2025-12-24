@@ -4,6 +4,10 @@ import type { PortainerContainer } from "./interfaces.ts";
 export async function getFirstEnvironmentId(): Promise<number | null> {
     try {
         const environments = await PortainerApi.instance.getEnvironments();
+        if (!environments || environments.length === 0) {
+            console.error('No environments found in the Portainer instance.');
+            return null;
+        }
         return environments.length > 0 ? environments[0].Id : null;
     } catch (error) {
         console.error('Error getting first environment ID:', error);
@@ -48,7 +52,8 @@ export async function getContainerByDetails(
     criteria: { image?: string; label?: string }
 ): Promise<PortainerContainer | null> {
     if (!criteria.image && !criteria.label) {
-        throw new Error('At least one search criteria (image or label) must be provided.');
+        console.error('At least one search criteria (image or label) must be provided.');
+        return null;
     }
 
     try {
