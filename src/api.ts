@@ -1,9 +1,9 @@
 import { PortainerAuth } from './auth.ts';
-import { logInfo, logWarn, logError } from '../logger.ts';
 import { EnvironmentsMixin } from './mixins/EnvironmentMixins.ts';
 import { ResourceFetchingMixin } from './mixins/ResourceFetchingMixin.ts';
 import { ResourceDeletionMixin } from './mixins/ResourceDeletionMixin.ts';
 import { ContainerControlsMixin } from './mixins/ContainerControlsMixin.ts';
+import { StackControlsMixin } from './mixins/StackControlsMixin.ts';
 
 class PortainerApiBase {
     auth: PortainerAuth;
@@ -16,80 +16,33 @@ class PortainerApiBase {
     }
 }
 
-const MixinStack = ContainerControlsMixin(
-    ResourceDeletionMixin(
-        ResourceFetchingMixin(
-            EnvironmentsMixin(
-                PortainerApiBase
+const MixinStack = StackControlsMixin(
+    ContainerControlsMixin(
+        ResourceDeletionMixin(
+            ResourceFetchingMixin(
+                EnvironmentsMixin(
+                    PortainerApiBase
+                )
             )
         )
     )
 )
 
-/**
- * Portainer API Client
- * 
- * Handles portainer API interactions.
- */
+// Maintain singleton instance
 class PortainerApi extends MixinStack {
-    constructor(public config: any) {
-        super(config);
+    public static instance: PortainerApi;
+    private constructor(
+        environmentId: number | null = null
+    ) {
+        super(environmentId);
     }
-
-    /**
-     * Start a stack
-     * @param stackId - The ID of the stack to start
-     * @param environmentId - The ID of the Portainer environment
-     * @returns {Promise<boolean>} Promise resolving when stack is started
-     */
-    async startStack(stackId: number, environmentId?: number | null): Promise<boolean> {
-        if (environmentId === null || environmentId === undefined) {
-            environmentId = await this.ensureEnvId();
+    public static getInstance(
+        environmentId: number | null = null
+    ): PortainerApi {
+        if (!PortainerApi.instance) {
+            PortainerApi.instance = new PortainerApi(environmentId);
         }
-
-        if (environmentId === null) {
-            logError('No Portainer environments found. Cannot start stack.');
-            return false;
-        }
-
-        try {
-            logInfo(`Starting stack ${stackId}...`);
-            await this.auth.axiosInstance.post(`/api/stacks/${stackId}/start?endpointId=${environmentId}`);
-            logInfo('Stack started successfully');
-            return true;
-        } catch (error) {
-            logError(`Failed to start stack ${stackId}:`, error);
-            return false;
-        }
-    }
-
-
-    /**
-     * Stop a stack
-     * @param stackId - The ID of the stack to stop
-     * @param environmentId - The ID of the Portainer environment
-     * @returns {Promise<boolean>} Promise resolving when stack is stopped
-     */
-    async stopStack(stackId: number, environmentId?: number | null): Promise<boolean> {
-        if (environmentId === null) {
-            logError('Environment ID is required to stop a stack.');
-            return false;
-        }
-
-        try {
-            logInfo(`Stopping stack ${stackId}...`);
-            await this.auth.axiosInstance.post(`/api/stacks/${stackId}/stop?endpointId=${environmentId}`);
-            logInfo('Stack stopped successfully');
-            return true;
-        } catch (error) {
-            logError(`Failed to stop stack ${stackId}:`, error);
-            return false;
-        }
+        return PortainerApi.instance;
     }
 }
-
-const instance = new MixinStack(
-
-);
-
-export { instance as PortainerApiInstance };
+export { PortainerApi };
