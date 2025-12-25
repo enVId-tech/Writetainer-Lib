@@ -15,7 +15,7 @@ export function EnvironmentsMixin<TBase extends Constructor<EnvMixin>>(Base: TBa
          * @param environmentId - The ID of the environment to fetch.
          * @returns {Promise<PortainerEnvironment | undefined>} A promise that resolves to the environment object.
          */
-        async getEnvironment(): Promise<PortainerEnvironment | undefined> {
+        async getEnvironmentDetails(): Promise<PortainerEnvironment | undefined> {
             try {
                 if (!this.auth.isValidated) {
                     return undefined;
