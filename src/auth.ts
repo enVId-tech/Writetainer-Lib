@@ -29,7 +29,8 @@ export class PortainerAuth {
                 'Content-Type': 'application/json',
             },
             // For development: ignore SSL certificate validation when using IP addresses
-            httpsAgent: (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) ?
+            // TODO: CHANGE LATER - this is insecure for production use
+            httpsAgent: (process.env.NODE_ENV !== 'production') ?
                 new https.Agent({ rejectUnauthorized: false }) :
                 undefined,
         });

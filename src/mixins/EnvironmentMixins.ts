@@ -1,12 +1,10 @@
 import { logError, logInfo, logWarn } from "../../logger.ts";
+import { PortainerAuth } from "../auth.ts";
 import type { Constructor, PortainerEnvironment } from "../types.ts";
 import { getFirstEnvironmentId } from "../utils.ts";
 
 export interface EnvMixin {
-    auth: {
-        isValidated: boolean;
-        axiosInstance: import("axios").AxiosInstance;
-    };
+    auth: PortainerAuth;
     environmentId: number | null;
 }
 
@@ -38,8 +36,11 @@ export function EnvironmentsMixin<TBase extends Constructor<EnvMixin>>(Base: TBa
         async getEnvironments(): Promise<PortainerEnvironment[] | undefined> {
             try {
                 if (!this.auth.isValidated) {
+                    logError('Authentication is not validated. Cannot fetch environments.');
                     return undefined;
                 }
+
+                logInfo('Fetching environments from Portainer...');
 
                 const response = await this.auth.axiosInstance.get<PortainerEnvironment[]>('/api/endpoints');
 
@@ -59,19 +60,15 @@ export function EnvironmentsMixin<TBase extends Constructor<EnvMixin>>(Base: TBa
         public async ensureEnvId(): Promise<number | null> {
             if (this.environmentId === null) {
                 logWarn('Environment ID is not set, getting default environment ID.');
-                const firstEnvId = getFirstEnvironmentId().then(id => {
-                    if (id === null || id === undefined) {
-                        logWarn('No Portainer environments found.');
-                        logError("ALERT: Any Portainer operations requiring an environment ID will fail until one is set.");
-                        return;
-                    }
-                    return id;
-                })
-
+                const firstEnvId = await getFirstEnvironmentId()
+                if (firstEnvId === null || firstEnvId === undefined) {
+                    logWarn('No Portainer environments found.');
+                    logError("ALERT: Any Portainer operations requiring an environment ID will fail until one is set.");
+                    return null;
+                }
 
                 this.environmentId = firstEnvId as unknown as number | null;
             }
-
             return this.environmentId;
         }
     }
