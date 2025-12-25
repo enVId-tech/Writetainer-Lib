@@ -15,6 +15,5 @@ describe("Environment Mixin Tests", () => {
     describe("ensureEnvId()", () => {
         it("should return a valid environment ID when environments are available", async () => {});
         it("should return null when no environments are available", async () => {});
-
     });
 });
