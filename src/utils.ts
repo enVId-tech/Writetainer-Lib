@@ -28,13 +28,23 @@ export async function getFirstEnvironmentId(): Promise<number | null> {
 export async function getContainerByDetails(
     criteria: { image?: string; label?: string }
 ): Promise<PortainerContainer | null> {
+    if (!criteria || typeof criteria !== 'object') {
+        logError('Invalid criteria: must be an object');
+        return null;
+    }
+
     if (!criteria.image && !criteria.label) {
         logError('At least one search criteria (image or label) must be provided.');
         return null;
     }
 
-    if (typeof criteria.image !== 'string' || typeof criteria.label !== 'string') {
-        logError('Search criteria must be of type string.');
+    if (criteria.image !== undefined && typeof criteria.image !== 'string') {
+        logError('Search criteria.image must be of type string.');
+        return null;
+    }
+
+    if (criteria.label !== undefined && typeof criteria.label !== 'string') {
+        logError('Search criteria.label must be of type string.');
         return null;
     }
 
@@ -134,7 +144,10 @@ export async function verifyStackCreation(stackName: string, timeoutMs: number =
         return false;
     }
 
-    if (isNaN(timeoutMs) || Math.floor(timeoutMs) < 0) {
+    if (timeoutMs === undefined || timeoutMs === null) {
+        logWarn('timeoutMs is missing, using default value of 5000 ms.');
+        timeoutMs = 5000;
+    } else if (typeof timeoutMs !== 'number' || isNaN(timeoutMs) || Math.floor(timeoutMs) < 0) {
         logWarn("timeoutMs is an invalid number, setting it to default value of 5000 ms.");
         timeoutMs = 5000;
     } else {
@@ -173,7 +186,10 @@ export async function verifyContainerCreation(containerName: string, timeoutMs: 
         return false;
     }
 
-    if (isNaN(timeoutMs) || Math.floor(timeoutMs) < 0) {
+    if (timeoutMs === undefined || timeoutMs === null) {
+        logWarn('timeoutMs is missing, using default value of 5000 ms.');
+        timeoutMs = 5000;
+    } else if (typeof timeoutMs !== 'number' || isNaN(timeoutMs) || Math.floor(timeoutMs) < 0) {
         logWarn("timeoutMs is an invalid number, setting it to default value of 5000 ms.");
         timeoutMs = 5000;
     } else {
