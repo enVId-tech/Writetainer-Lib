@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ResourceFetchingMixin } from "../../src/mixins/ResourceFetchingMixin";
+import { ResourceFetchingMixin } from "../../src/mixins/ResourceFetchingMixin.ts";
 
 class MockBase {
     auth = {
@@ -20,9 +20,9 @@ describe("Resource Fetching Mixin Tests", () => {
         vi.clearAllMocks();
         instance = new ResourceFetchingClass();
     });
-    
+
     describe("getStacks()", () => {
-        it("should handle invalid authentication cycle gracefully", async () => { 
+        it("should handle invalid authentication cycle gracefully", async () => {
             instance.auth.isValidated = false;
 
             const result = await instance.getStacks();
@@ -30,7 +30,7 @@ describe("Resource Fetching Mixin Tests", () => {
             expect(result).toBeUndefined();
             expect(instance.auth.axiosInstance.get).not.toHaveBeenCalled();
         });
-        it("should handle API errors gracefully", async () => { 
+        it("should handle API errors gracefully", async () => {
             instance.auth.axiosInstance.get.mockRejectedValue(new Error("API Error"));
 
             const result = await instance.getStacks();
@@ -38,7 +38,7 @@ describe("Resource Fetching Mixin Tests", () => {
             expect(instance.auth.axiosInstance.get).toBeCalled();
             expect(result).toBeUndefined();
         });
-        it("should return a list of stacks for successful API call", async () => { 
+        it("should return a list of stacks for successful API call", async () => {
             instance.auth.axiosInstance.get.mockResolvedValue({ data: [{ Id: 1, Name: "Test Stack" }] });
 
             const result = await instance.getStacks();
@@ -48,28 +48,188 @@ describe("Resource Fetching Mixin Tests", () => {
         });
     });
     describe("getContainers()", () => {
-        it("should handle invalid authentication cycle gracefully", async () => { });
-        it("should handle API errors gracefully", async () => { });
-        it("should return a list of containers for successful API call", async () => { });
+        it("should handle invalid authentication cycle gracefully", async () => {
+            instance.auth.isValidated = false;
+
+            const result = await instance.getContainers(true);
+
+            expect(result).toBeUndefined();
+            expect(instance.auth.axiosInstance.get).not.toHaveBeenCalled();
+        });
+        it("should handle invalid environment IDs correctly", async () => {
+            instance.ensureEnvId.mockResolvedValue(null);
+
+            const result = await instance.getContainers(true);
+
+            expect(result).toBeUndefined();
+            expect(instance.ensureEnvId).toHaveBeenCalled();
+        });
+        it("should handle API errors gracefully", async () => {
+            instance.ensureEnvId.mockResolvedValue(1);
+            instance.auth.axiosInstance.get.mockRejectedValue(new Error("API Error"));
+
+            try {
+                await instance.getContainers(true, 1);
+            } catch (error: any) {
+                expect(error.message).toContain("Failed to fetch containers");
+            }
+        });
+        it("should return a list of containers for successful API call", async () => {
+            instance.ensureEnvId.mockResolvedValue(1);
+            instance.auth.axiosInstance.get.mockResolvedValue({ data: [{ Id: "abc123", Names: ["/test-container"] }] });
+
+            const result = await instance.getContainers(true, 1);
+
+            expect(instance.auth.axiosInstance.get).toHaveBeenCalledWith(
+                "/api/endpoints/1/docker/containers/json",
+                { params: { all: true } }
+            );
+            expect(result).toEqual([{ Id: "abc123", Names: ["/test-container"] }]);
+        });
     });
     describe("getStatus()", () => {
-        it("should handle invalid authentication cycle gracefully", async () => { });
-        it("should handle API errors gracefully", async () => { });
-        it("should return status information for successful API call", async () => { });
+        it("should handle invalid authentication cycle gracefully", async () => {
+            instance.auth.isValidated = false;
+            instance.auth.axiosInstance.get.mockResolvedValue({ data: { version: "2.0" } });
+
+            const result = await instance.getStatus();
+
+            // getStatus doesn't check auth validation, so it should still call the API
+            expect(result).toEqual({ version: "2.0" });
+        });
+        it("should handle API errors gracefully", async () => {
+            instance.auth.axiosInstance.get.mockRejectedValue(new Error("API Error"));
+
+            const result = await instance.getStatus();
+
+            expect(result).toBeUndefined();
+        });
+        it("should return status information for successful API call", async () => {
+            const mockStatus = { version: "2.19.0", edition: "CE" };
+            instance.auth.axiosInstance.get.mockResolvedValue({ data: mockStatus });
+
+            const result = await instance.getStatus();
+
+            expect(instance.auth.axiosInstance.get).toHaveBeenCalledWith("/api/system/status");
+            expect(result).toEqual(mockStatus);
+        });
     });
     describe("getContainerDetails()", () => {
-        it("should handle invalid environment ID gracefully", async () => { });
-        it("should handle missing container ID gracefully", async () => { });
-        it("should handle invalid container list fetching gracefully", async () => { });
-        it("should try to run container details fetching successfully", async () => { });
-        it("should try to find container details by name if API call fails", async () => { });
-        it("should try to find container details by partial name if name finding fails", async () => { });
-        it("should return container details or undefined appropriately", async () => { });
+        it("should handle invalid environment ID gracefully", async () => {
+            instance.ensureEnvId.mockResolvedValue(null);
+
+            const result = await instance.getContainerDetails("test-container");
+
+            expect(result).toBeUndefined();
+            expect(instance.ensureEnvId).toHaveBeenCalled();
+        });
+        it("should handle missing container ID gracefully", async () => {
+            instance.ensureEnvId.mockResolvedValue(1);
+
+            const result = await instance.getContainerDetails("");
+
+            expect(result).toBeUndefined();
+        });
+        it("should handle invalid container list fetching gracefully", async () => {
+            instance.ensureEnvId.mockResolvedValue(1);
+            instance.auth.axiosInstance.get.mockRejectedValue(new Error("Failed to fetch containers"));
+
+            try {
+                await instance.getContainerDetails("test-container", 1);
+            } catch (error: any) {
+                expect(error.message).toContain("Failed to fetch containers");
+            }
+        });
+        it("should try to run container details fetching successfully", async () => {
+            const mockContainer = { Id: "abc123", Names: ["/test-container"], State: "running" };
+            instance.ensureEnvId.mockResolvedValue(1);
+            const spy = vi.spyOn(instance, "getContainers")
+                .mockResolvedValue([mockContainer]);
+            instance.auth.axiosInstance.get
+                .mockResolvedValueOnce({ data: mockContainer }) // Direct API call succeeds
+
+            const result = await instance.getContainerDetails("abc123", 1);
+
+            expect(spy).toHaveBeenCalled();
+            expect(result).toEqual(mockContainer);
+        });
+        it("should try to find container details by name if API call fails", async () => {
+            const mockContainers = [
+                { Id: "abc123", Names: ["/test-container"], State: "running" }
+            ];
+            instance.ensureEnvId.mockResolvedValue(1);
+            const spy = vi.spyOn(instance, "getContainers")
+                .mockResolvedValue(mockContainers);
+            instance.auth.axiosInstance.get
+                .mockRejectedValueOnce(new Error("Not found")) // Direct API call fails
+            const result = await instance.getContainerDetails("test-container", 1);
+
+            expect(spy).toHaveBeenCalled();
+            expect(result).toEqual(mockContainers[0]);
+        });
+        it("should try to find container details by partial name if name finding fails", async () => {
+            const mockContainers = [
+                { Id: "abc123", Names: ["/my-test-container"], State: "running" }
+            ];
+            instance.ensureEnvId.mockResolvedValue(1);
+            const spy = vi.spyOn(instance, "getContainers")
+                .mockResolvedValue(mockContainers);
+            instance.auth.axiosInstance.get
+                .mockRejectedValueOnce(new Error("Not found")) // Direct API call fails
+
+            const result = await instance.getContainerDetails("test", 1);
+
+            expect(result).toEqual(mockContainers[0]);
+        });
+        it("should return container details or undefined appropriately", async () => {
+            instance.ensureEnvId.mockResolvedValue(1);
+            instance.auth.axiosInstance.get
+                .mockRejectedValueOnce(new Error("Not found")) // Direct API call fails
+                .mockResolvedValueOnce({ data: [] }); // getContainers returns empty
+
+            const result = await instance.getContainerDetails("nonexistent", 1);
+
+            expect(result).toBeUndefined();
+        });
     });
     describe("getImages()", () => {
-        it("should handle invalid environment ID gracefully", async () => { });
-        it("should handle invalid image list fetching gracefully", async () => { });
-        it("should return a list of images for successful API call", async () => { });
-        it("should return undefined when no images are found or an error occurs", async () => { });
+        it("should handle invalid environment ID gracefully", async () => {
+            instance.ensureEnvId.mockResolvedValue(null);
+
+            const result = await instance.getImages();
+
+            expect(result).toBeUndefined();
+            expect(instance.ensureEnvId).toHaveBeenCalled();
+        });
+        it("should handle invalid image list fetching gracefully", async () => {
+            instance.ensureEnvId.mockResolvedValue(1);
+            instance.auth.axiosInstance.get.mockRejectedValue(new Error("API Error"));
+
+            const result = await instance.getImages(1);
+
+            expect(result).toBeUndefined();
+        });
+        it("should return a list of images for successful API call", async () => {
+            const mockImages = [
+                { Id: "img123", RepoTags: ["nginx:latest"], Created: 1234567890, Size: 1000000 }
+            ];
+            instance.ensureEnvId.mockResolvedValue(1);
+            instance.auth.axiosInstance.get.mockResolvedValue({ data: mockImages });
+
+            const result = await instance.getImages(1);
+
+            expect(instance.auth.axiosInstance.get).toHaveBeenCalledWith(
+                "/api/endpoints/1/docker/images/json"
+            );
+            expect(result).toEqual(mockImages);
+        });
+        it("should return undefined when no images are found or an error occurs", async () => {
+            instance.ensureEnvId.mockResolvedValue(1);
+            instance.auth.axiosInstance.get.mockRejectedValue(new Error("Not found"));
+
+            const result = await instance.getImages(1);
+
+            expect(result).toBeUndefined();
+        });
     });
 });

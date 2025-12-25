@@ -38,6 +38,12 @@ export function ResourceFetchingMixin<TBase extends Constructor<RFMixin>>(Base: 
          * @returns {Promise<PortainerContainer[] | undefined>} A promise that resolves to an array of container objects.
          */
         async getContainers(includeAll: boolean, environmentId?: number | null): Promise<PortainerContainer[] | undefined> {
+
+            if (!this.auth.isValidated) {
+                logError('Authentication is not validated. Cannot fetch containers.');
+                return undefined;
+            }
+            
             // If no environment ID is provided and no default is set, try to get the first one
             if (environmentId === null || environmentId === undefined) {
                 environmentId = await this.ensureEnvId();
@@ -53,7 +59,8 @@ export function ResourceFetchingMixin<TBase extends Constructor<RFMixin>>(Base: 
                 const response = await this.auth.axiosInstance.get<PortainerContainer[]>(`/api/endpoints/${environmentId}/docker/containers/json`, { params });
                 return response.data;
             } catch (error) {
-                throw new Error(`Failed to fetch containers: ${error}`);
+                logError(`Failed to fetch containers: ${error}`);
+                return undefined;
             }
         }
 
