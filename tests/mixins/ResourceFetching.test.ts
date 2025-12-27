@@ -124,8 +124,8 @@ describe("Resource Fetching Mixin Tests", () => {
 
             const result = await instance.getStatus();
 
-            // getStatus doesn't check auth validation, so it should still call the API
-            expect(result).toEqual({ version: "2.0" });
+            // getStatus checks auth validation, so it should return undefined
+            expect(result).toBeUndefined();
         });
         it("should handle API errors gracefully", async () => {
             instance.auth.axiosInstance.get.mockRejectedValue(new Error("API Error"));
