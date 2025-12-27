@@ -149,5 +149,41 @@ export function ContainerControlsMixin<TBase extends Constructor<CCtrlMixin>>(Ba
                 return false;
             }
         }
+        
+            /**
+     * Pull the latest image for a container
+     * @param imageName - The name of the image to pull
+     * @param environmentId - The ID of the Portainer environment
+     * @returns {Promise<boolean>} Promise resolving when image is pulled
+     */
+    async pullImage(
+        imageName: string, 
+        environmentId?: number | null): Promise<boolean> {
+        if (!imageName || typeof imageName !== 'string') {
+            logError('Invalid imageName: must be a non-empty string');
+            return false;
+        }
+
+        if (environmentId !== undefined && environmentId !== null && (typeof environmentId !== 'number' || isNaN(environmentId))) {
+            environmentId = await this.ensureEnvId();
+        }
+
+        if (environmentId === null) {
+            logError('No Portainer environments found. Cannot pull image.');
+            return false;
+        }
+
+        try {
+            logInfo(`Pulling image ${imageName}...`);
+            await this.auth.axiosInstance.post(
+                `/api/endpoints/${environmentId}/docker/images/create?fromImage=${encodeURIComponent(imageName)}`
+            );
+            logInfo(`Image ${imageName} pulled successfully`);
+            return true;
+        } catch (error) {
+            logError(`Failed to pull image ${imageName}:`, error);
+            return false;
+        }
+    }
     }
 }
