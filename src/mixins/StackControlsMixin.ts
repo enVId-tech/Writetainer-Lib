@@ -13,9 +13,8 @@ export function StackControlsMixin<TBase extends Constructor<StackControlsMixinB
     return class extends Base {
         /**
          * Validates stack ID parameter
-         * @private
          */
-        private validateStackId(stackId: number): boolean {
+        validateStackId(stackId: number): boolean {
             if (typeof stackId !== 'number' || isNaN(stackId) || stackId <= 0) {
                 logError('Invalid stackId: must be a positive number');
                 return false;
@@ -25,9 +24,8 @@ export function StackControlsMixin<TBase extends Constructor<StackControlsMixinB
 
         /**
          * Validates and resolves environment ID
-         * @private
          */
-        private async validateAndResolveEnvironmentId(environmentId?: number | null): Promise<number | null> {
+        async validateAndResolveEnvironmentId(environmentId?: number | null): Promise<number | null> {
             if (environmentId !== undefined && environmentId !== null && 
                 (typeof environmentId !== 'number' || isNaN(environmentId))) {
                 logError('Invalid environmentId: must be a number, null, or undefined');
@@ -44,9 +42,8 @@ export function StackControlsMixin<TBase extends Constructor<StackControlsMixinB
 
         /**
          * Executes a stack action via API
-         * @private
          */
-        private async executeStackAction(
+        async executeStackAction(
             stackId: number,
             action: 'start' | 'stop',
             environmentId: number

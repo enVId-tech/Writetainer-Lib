@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { logInfo, logWarn, logError, setLogger, ActiveLogger, type Logger } from "../logger";
+import { logInfo, logWarn, logError, setLogger, ActiveLogger, type Logger } from "../logger.ts";
 import debug from 'debug';
 
 // Mock the debug module

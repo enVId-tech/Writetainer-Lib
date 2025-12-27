@@ -13,7 +13,7 @@ export async function getFirstEnvironmentId(): Promise<number | null> {
             logError('No environments found in the Portainer instance.');
             return null;
         }
-        return environments.length > 0 ? environments[0].Id : null;
+        return environments.length > 0 ? environments[0]!.Id : null;
     } catch (error) {
         logError('Error getting first environment ID:', error);
         return Promise.resolve(null);

@@ -1,57 +1,75 @@
-// For interfacing with the backend API
-import { PortainerApi } from './src/api.ts';
-import { PortainerFactory } from './src/factory.ts';
-import { logInfo, logWarn, logError } from './logger.ts';
-import dotenv from 'dotenv';
+/**
+ * Writetainer-Lib - A TypeScript library for interacting with Portainer API
+ * 
+ * Main entry point for the library. This file exports all public APIs.
+ * @module writetainer-lib
+ */
 
-dotenv.config({ path: './.env' });
+// ============================================
+// Core Classes
+// ============================================
 
-async function main() {
-    const portainerGetClient = PortainerApi.getInstance(
-        null
-    );
+/**
+ * Main API client for interacting with Portainer
+ * Provides methods for managing containers, stacks, and environments
+ */
+export { PortainerApi } from './src/api.ts';
 
-    logInfo('Portainer URL from environment:', process.env.PORTAINER_URL);
-    logInfo('Portainer API Token from environment:', process.env.PORTAINER_API_KEY ? '***' : 'Not Set');
+/**
+ * Factory for creating Portainer resources (stacks, containers)
+ * Provides high-level methods for resource creation with validation
+ */
+export { PortainerFactory } from './src/factory.ts';
 
-    logInfo('Environment ID from PortainerAuth:', await portainerGetClient.ensureEnvId());
-    logInfo('PortainerAuth isValidated:', await (portainerGetClient as any).auth.isValidated);
-    logInfo('Is Connected: ', await portainerGetClient.getStatus());
-    // logInfo(`Stacks: ${await portainerGetClient.getStacks()}`);
+/**
+ * Authentication client for Portainer
+ * Handles authentication and axios instance configuration
+ */
+export { PortainerAuth } from './src/auth.ts';
 
+// ============================================
+// Type Definitions
+// ============================================
 
-    logInfo("Creating new stack:")
+/**
+ * Type definitions for Portainer resources
+ */
+export type {
+    PortainerEnvironment,
+    PortainerStack,
+    PortainerContainer,
+    PortainerImage,
+    PortainerStackContent,
+    Constructor
+} from './src/types.ts';
 
-    const stackContent = `services:
-  test2-minecraftserver:
-    image: itzg/minecraft-server
-    container_name: test2-minecraftserver
-    volumes:
-      - /mnt/nvme/minecraft/test2-minecraftserver:/data
-    environment:
-      TYPE: PURPUR
-      VERSION: 1.21.11
-      EULA: "TRUE"
-      INIT_MEMORY: 1G
-      MAX_MEMORY: 2G
-      SERVER_PORT: 25579
-      ENABLE_WHITELIST: false
-      ENFORCE_WHITELIST: false
-      ONLINE_MODE: false
-      PORT: 25579
-      EXISTING_WHITELIST_FILE: SYNC_FILE_MERGE_LIST
-    restart: unless-stopped
-    tty: true
-    stdin_open: true
-    `
+// ============================================
+// Utility Functions
+// ============================================
 
-    await PortainerFactory.getInstance().createStack({
-        Name: "test2-minecraftserver".toLowerCase(),
-        ComposeFile: stackContent,
-        Env: []
-    })
+/**
+ * Utility functions for working with Portainer resources
+ */
+export {
+    getFirstEnvironmentId,
+    getContainerByDetails,
+    getStackById,
+    getStackByName,
+    verifyStackCreation,
+    verifyContainerCreation
+} from './src/utils.ts';
 
-    await PortainerApi.instance.deleteStack("test2-minecraftserver".toLowerCase());
-}
+// ============================================
+// Logging Functions
+// ============================================
 
-await main();
+/**
+ * Logging utilities for the library
+ * Uses debug package under the hood with 'portainer-api' namespace
+ */
+export {
+    logInfo,
+    logWarn,
+    logError,
+    setLogger
+} from './logger.ts';

@@ -1,5 +1,5 @@
 import { PortainerAuth } from "./auth.ts";
-import { ContainerControlsMixin } from "./mixins/ContainerControlsMixin";
+import { ContainerControlsMixin } from "./mixins/ContainerControlsMixin.ts";
 import { EnvironmentsMixin } from "./mixins/EnvironmentMixins.ts";
 import { ResourceFetchingMixin } from "./mixins/ResourceFetchingMixin.ts";
 import { ShellControlsMixin } from "./mixins/ShellControlsMixin.ts";

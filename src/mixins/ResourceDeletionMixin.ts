@@ -14,9 +14,8 @@ export function ResourceDeletionMixin<TBase extends Constructor<ResourceDeletion
     return class extends Base {
         /**
          * Validates parameters for container cleanup
-         * @private
          */
-        private validateCleanupParams(containerName: string, environmentId?: number | null): boolean {
+        validateCleanupParams(containerName: string, environmentId?: number | null): boolean {
             if (!containerName || typeof containerName !== 'string') {
                 logError('Invalid containerName: must be a non-empty string');
                 return false;
@@ -33,9 +32,8 @@ export function ResourceDeletionMixin<TBase extends Constructor<ResourceDeletion
 
         /**
          * Finds container by name in container list
-         * @private
          */
-        private findContainerByName(
+        findContainerByName(
             containers: PortainerContainer[],
             containerName: string
         ): PortainerContainer | undefined {
@@ -46,9 +44,8 @@ export function ResourceDeletionMixin<TBase extends Constructor<ResourceDeletion
 
         /**
          * Stops and removes a container
-         * @private
          */
-        private async stopAndRemoveContainer(
+        async stopAndRemoveContainer(
             container: PortainerContainer,
             environmentId: number
         ): Promise<void> {

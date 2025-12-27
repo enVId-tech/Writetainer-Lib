@@ -1,7 +1,7 @@
 {
   "name": "writetainer-lib",
   "version": "25.12.27-dev.7",
-  "description": "a portainer api accessibility library",
+  "description": "A TypeScript library for interacting with the Portainer API to manage Docker containers and stacks programmatically.",
   "homepage": "https://github.com/enVId-tech/Writetainer-Lib#readme",
   "bugs": {
     "url": "https://github.com/enVId-tech/Writetainer-Lib/issues"
@@ -12,7 +12,6 @@
   },
   "license": "MIT",
   "author": "envid-tech",
-  "main": "index.js",
   "scripts": {
     "test": "vitest",
     "build": "tsc",
@@ -24,6 +23,19 @@
     "dotenv": "^17.2.3",
     "typescript": "^5.9.3"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@types/debug": "^4.1.12",

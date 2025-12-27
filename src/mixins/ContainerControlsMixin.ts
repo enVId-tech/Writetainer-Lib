@@ -10,14 +10,14 @@ interface ContainerControlsMixinBase {
 
 type ContainerAction = 'start' | 'stop' | 'remove' | 'kill' | 'pause' | 'unpause' | 'restart';
 
-interface ContainerActionOptions {
+export interface ContainerActionOptions {
     force?: boolean;
     removeVolumes?: boolean;
     signal?: string;
     timeout?: number;
 }
 
-interface ContainerControls {
+export interface ContainerControls {
     action: ContainerAction;
     containerId: string;
     environmentId?: number | null;
@@ -26,14 +26,13 @@ interface ContainerControls {
 
 export function ContainerControlsMixin<TBase extends Constructor<ContainerControlsMixinBase>>(Base: TBase) {
     return class extends Base {
-        private readonly VALID_ACTIONS: ReadonlyArray<ContainerAction> = 
+        readonly VALID_ACTIONS: ReadonlyArray<ContainerAction> = 
             ['start', 'stop', 'remove', 'kill', 'pause', 'unpause', 'restart'];
 
         /**
          * Validates container control parameters
-         * @private
          */
-        private validateContainerControls(controls: ContainerControls): boolean {
+        validateContainerControls(controls: ContainerControls): boolean {
             if (!controls || typeof controls !== 'object') {
                 logError('Invalid controls: must be an object');
                 return false;
@@ -65,9 +64,8 @@ export function ContainerControlsMixin<TBase extends Constructor<ContainerContro
 
         /**
          * Validates container action options
-         * @private
          */
-        private validateContainerOptions(options?: ContainerActionOptions): boolean {
+        validateContainerOptions(options?: ContainerActionOptions): boolean {
             if (!options) return true;
 
             if (typeof options !== 'object') {
@@ -101,17 +99,15 @@ export function ContainerControlsMixin<TBase extends Constructor<ContainerContro
 
         /**
          * Builds URL for container actions
-         * @private
          */
-        private buildContainerUrl(environmentId: number, containerId: string, action: string): string {
+        buildContainerUrl(environmentId: number, containerId: string, action: string): string {
             return `/api/endpoints/${environmentId}/docker/containers/${containerId}/${action}`;
         }
 
         /**
          * Executes the specified container action
-         * @private
          */
-        private async executeContainerAction(
+        async executeContainerAction(
             action: ContainerAction,
             containerId: string,
             environmentId: number,
@@ -144,9 +140,8 @@ export function ContainerControlsMixin<TBase extends Constructor<ContainerContro
 
         /**
          * Starts a container
-         * @private
          */
-        private async startContainer(containerId: string, environmentId: number): Promise<void> {
+        async startContainer(containerId: string, environmentId: number): Promise<void> {
             logInfo(`Starting container ${containerId}...`);
             await this.auth.axiosInstance.post(this.buildContainerUrl(environmentId, containerId, 'start'));
             logInfo('Container started successfully');
@@ -154,9 +149,8 @@ export function ContainerControlsMixin<TBase extends Constructor<ContainerContro
 
         /**
          * Stops a container
-         * @private
          */
-        private async stopContainer(containerId: string, environmentId: number): Promise<void> {
+        async stopContainer(containerId: string, environmentId: number): Promise<void> {
             logInfo(`Stopping container ${containerId}...`);
             await this.auth.axiosInstance.post(this.buildContainerUrl(environmentId, containerId, 'stop'));
             logInfo('Container stopped successfully');
@@ -164,9 +158,8 @@ export function ContainerControlsMixin<TBase extends Constructor<ContainerContro
 
         /**
          * Removes a container
-         * @private
          */
-        private async removeContainer(
+        async removeContainer(
             containerId: string,
             environmentId: number,
             options?: ContainerActionOptions
@@ -182,9 +175,8 @@ export function ContainerControlsMixin<TBase extends Constructor<ContainerContro
 
         /**
          * Kills a container
-         * @private
          */
-        private async killContainer(
+        async killContainer(
             containerId: string,
             environmentId: number,
             signal: string = 'SIGKILL'
@@ -198,9 +190,8 @@ export function ContainerControlsMixin<TBase extends Constructor<ContainerContro
 
         /**
          * Pauses a container
-         * @private
          */
-        private async pauseContainer(containerId: string, environmentId: number): Promise<void> {
+        async pauseContainer(containerId: string, environmentId: number): Promise<void> {
             logInfo(`Pausing container ${containerId}...`);
             await this.auth.axiosInstance.post(this.buildContainerUrl(environmentId, containerId, 'pause'));
             logInfo('Container paused successfully');
@@ -208,9 +199,8 @@ export function ContainerControlsMixin<TBase extends Constructor<ContainerContro
 
         /**
          * Unpauses a container
-         * @private
          */
-        private async unpauseContainer(containerId: string, environmentId: number): Promise<void> {
+        async unpauseContainer(containerId: string, environmentId: number): Promise<void> {
             logInfo(`Unpausing container ${containerId}...`);
             await this.auth.axiosInstance.post(this.buildContainerUrl(environmentId, containerId, 'unpause'));
             logInfo('Container unpaused successfully');
@@ -218,9 +208,8 @@ export function ContainerControlsMixin<TBase extends Constructor<ContainerContro
 
         /**
          * Restarts a container
-         * @private
          */
-        private async restartContainer(
+        async restartContainer(
             containerId: string,
             environmentId: number,
             timeout: number = 10000

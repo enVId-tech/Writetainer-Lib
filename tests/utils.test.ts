@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import * as utils from "../src/utils";
-import { PortainerApi } from "../src/api";
+import * as utils from "../src/utils.ts";
+import { PortainerApi } from "../src/api.ts";
 
 // Mock the PortainerApi
 vi.mock("../src/api", () => {

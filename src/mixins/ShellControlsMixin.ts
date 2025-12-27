@@ -9,18 +9,18 @@ interface ShellControlsMixinBase {
     ensureEnvId: () => Promise<number | null>;
 }
 
-interface CommandExecutionResult {
+export interface CommandExecutionResult {
     output: string;
     exitCode: number;
 }
 
-interface ExecConfig {
+export interface ExecConfig {
     AttachStdout: boolean;
     AttachStderr: boolean;
     Cmd: string[];
 }
 
-interface ExecStartConfig {
+export interface ExecStartConfig {
     Detach: boolean;
     Tty: boolean;
 }
@@ -29,9 +29,8 @@ export function ShellControlsMixin<TBase extends Constructor<ShellControlsMixinB
     return class extends Base {
         /**
          * Validates the parameters for command execution
-         * @private
          */
-        private validateExecuteCommandParams(
+        validateExecuteCommandParams(
             containerId: string,
             command: string,
             environmentId?: number | null
@@ -57,9 +56,8 @@ export function ShellControlsMixin<TBase extends Constructor<ShellControlsMixinB
 
         /**
          * Creates an exec configuration for shell command execution
-         * @private
          */
-        private createExecConfig(command: string): ExecConfig {
+        createExecConfig(command: string): ExecConfig {
             return {
                 AttachStdout: true,
                 AttachStderr: true,
@@ -69,9 +67,8 @@ export function ShellControlsMixin<TBase extends Constructor<ShellControlsMixinB
 
         /**
          * Creates a start configuration for exec instance
-         * @private
          */
-        private createExecStartConfig(): ExecStartConfig {
+        createExecStartConfig(): ExecStartConfig {
             return {
                 Detach: false,
                 Tty: false
@@ -80,9 +77,8 @@ export function ShellControlsMixin<TBase extends Constructor<ShellControlsMixinB
 
         /**
          * Executes a command in a container for a specific environment
-         * @private
          */
-        private async executeCommandInEnvironment(
+        async executeCommandInEnvironment(
             containerId: string,
             command: string,
             envId: number
@@ -111,9 +107,8 @@ export function ShellControlsMixin<TBase extends Constructor<ShellControlsMixinB
 
         /**
          * Attempts to retry command execution with a new environment ID
-         * @private
          */
-        private async retryWithNewEnvironment(
+        async retryWithNewEnvironment(
             containerId: string,
             command: string,
             originalEnvId: number
