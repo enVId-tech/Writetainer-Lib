@@ -43,16 +43,16 @@ export function ResourceFetchingMixin<TBase extends Constructor<RFMixin>>(Base: 
                 return undefined;
             }
 
+            if (!this.auth.isValidated) {
+                logError('Authentication is not validated. Cannot fetch containers.');
+                return undefined;
+            }
+
             if (environmentId !== undefined && environmentId !== null && (typeof environmentId !== 'number' || isNaN(environmentId))) {
                 logError('Invalid environmentId: must be a number, null, or undefined');
                 return undefined;
             }
 
-            if (!this.auth.isValidated) {
-                logError('Authentication is not validated. Cannot fetch containers.');
-                return undefined;
-            }
-            
             // If no environment ID is provided and no default is set, try to get the first one
             if (environmentId === null || environmentId === undefined) {
                 environmentId = await this.ensureEnvId();
@@ -79,10 +79,40 @@ export function ResourceFetchingMixin<TBase extends Constructor<RFMixin>>(Base: 
          */
         async getStatus(): Promise<any | undefined> {
             try {
+                if (!this.auth.isValidated) {
+                    logError('Authentication is not validated. Cannot fetch system status.');
+                    return undefined;
+                }
+
                 const response = await this.auth.axiosInstance.get('/api/system/status');
                 return response.data;
             } catch (error) {
                 logError('Failed to fetch system status:', error);
+                return undefined;
+            }
+        }
+
+        /**
+         * Get stack file content
+         * @param stackId - The ID of the stack
+         * @returns {Promise<string | undefined>} Promise resolving to the compose file content
+         */
+        async getStackFileContent(stackId: number): Promise<string | undefined> {
+            try {
+                if (typeof stackId !== 'number' || isNaN(stackId) || stackId <= 0) {
+                    logError('Invalid stackId: must be a positive number');
+                    return undefined;
+                }
+
+                if (!this.auth.isValidated) {
+                    logError('Authentication is not validated. Cannot fetch stack file content.');
+                    return undefined;
+                }
+
+                const response = await this.auth.axiosInstance.get(`/api/stacks/${stackId}/file`);
+                return response.data.StackFileContent || '';
+            } catch (error) {
+                logError(`Error getting stack file for ${stackId}:`, error);
                 return undefined;
             }
         }
@@ -96,6 +126,11 @@ export function ResourceFetchingMixin<TBase extends Constructor<RFMixin>>(Base: 
         async getContainerDetails(identifier: string, environmentId?: number | null): Promise<PortainerContainer | undefined> {
             if (!identifier || typeof identifier !== 'string') {
                 logError('Invalid identifier: must be a non-empty string');
+                return undefined;
+            }
+
+            if (!this.auth.isValidated) {
+                logError('Authentication is not validated. Cannot fetch container details.');
                 return undefined;
             }
 
@@ -153,6 +188,11 @@ export function ResourceFetchingMixin<TBase extends Constructor<RFMixin>>(Base: 
         async getImages(environmentId?: number | null): Promise<PortainerImage[] | undefined> {
             if (environmentId !== undefined && environmentId !== null && (typeof environmentId !== 'number' || isNaN(environmentId))) {
                 logError('Invalid environmentId: must be a number, null, or undefined');
+                return undefined;
+            }
+
+            if (!this.auth.isValidated) {
+                logError('Authentication is not validated. Cannot fetch images.');
                 return undefined;
             }
 

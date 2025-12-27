@@ -149,41 +149,120 @@ export function ContainerControlsMixin<TBase extends Constructor<CCtrlMixin>>(Ba
                 return false;
             }
         }
-        
-            /**
-     * Pull the latest image for a container
-     * @param imageName - The name of the image to pull
-     * @param environmentId - The ID of the Portainer environment
-     * @returns {Promise<boolean>} Promise resolving when image is pulled
-     */
-    async pullImage(
-        imageName: string, 
-        environmentId?: number | null): Promise<boolean> {
-        if (!imageName || typeof imageName !== 'string') {
-            logError('Invalid imageName: must be a non-empty string');
-            return false;
+
+        /**
+ * Pull the latest image for a container
+ * @param imageName - The name of the image to pull
+ * @param environmentId - Optional: The ID of the Portainer environment
+ * @returns {Promise<boolean>} Promise resolving when image is pulled
+ */
+        async pullImage(
+            imageName: string,
+            environmentId?: number | null): Promise<boolean> {
+            if (!imageName || typeof imageName !== 'string') {
+                logError('Invalid imageName: must be a non-empty string');
+                return false;
+            }
+
+            if (environmentId !== undefined && environmentId !== null && (typeof environmentId !== 'number' || isNaN(environmentId))) {
+                environmentId = await this.ensureEnvId();
+            }
+
+            if (environmentId === null) {
+                logError('No Portainer environments found. Cannot pull image.');
+                return false;
+            }
+
+            try {
+                logInfo(`Pulling image ${imageName}...`);
+                await this.auth.axiosInstance.post(
+                    `/api/endpoints/${environmentId}/docker/images/create?fromImage=${encodeURIComponent(imageName)}`
+                );
+                logInfo(`Image ${imageName} pulled successfully`);
+                return true;
+            } catch (error) {
+                logError(`Failed to pull image ${imageName}:`, error);
+                return false;
+            }
         }
 
-        if (environmentId !== undefined && environmentId !== null && (typeof environmentId !== 'number' || isNaN(environmentId))) {
-            environmentId = await this.ensureEnvId();
-        }
+        /**
+         * Update container resources (CPU and memory limits)
+         * @param containerId - The ID of the container to update
+         * @param environmentId - The ID of the Portainer environment
+         * @param resources - The resource limits to apply
+         * @returns {Promise<boolean>} - Promise resolving when resources are updated
+         */
+        async updateContainerResources(
+            containerId: string,
+            resources: {
+                cpuQuota?: number; // CPU quota in microseconds per CPU period
+                cpuPeriod?: number; // CPU period in microseconds 
+                memory?: number;   // Memory limit in bytes
+            },
+            environmentId?: number | null,
+        ): Promise<boolean> {
+            if (!containerId || typeof containerId !== 'string') {
+                logError('Invalid containerId: must be a non-empty string');
+                return false;
+            }
 
-        if (environmentId === null) {
-            logError('No Portainer environments found. Cannot pull image.');
-            return false;
-        }
+            if (environmentId !== undefined && environmentId !== null && (typeof environmentId !== 'number' || isNaN(environmentId))) {
+                environmentId = await this.ensureEnvId();
+            }
 
-        try {
-            logInfo(`Pulling image ${imageName}...`);
-            await this.auth.axiosInstance.post(
-                `/api/endpoints/${environmentId}/docker/images/create?fromImage=${encodeURIComponent(imageName)}`
-            );
-            logInfo(`Image ${imageName} pulled successfully`);
-            return true;
-        } catch (error) {
-            logError(`Failed to pull image ${imageName}:`, error);
-            return false;
+            if (environmentId === null) {
+                logError('No Portainer environments found. Cannot update container resources.');
+                return false;
+            }
+
+            if (!resources || typeof resources !== 'object') {
+                logError('Invalid resources: must be an object');
+                return false;
+            }
+
+            if (resources.cpuQuota !== undefined && (typeof resources.cpuQuota !== 'number' || isNaN(resources.cpuQuota) || resources.cpuQuota < 0)) {
+                logError('Invalid resources.cpuQuota: must be a non-negative number');
+                return false;
+            }
+
+            if (resources.cpuPeriod !== undefined && (typeof resources.cpuPeriod !== 'number' || isNaN(resources.cpuPeriod) || resources.cpuPeriod <= 0)) {
+                logError('Invalid resources.cpuPeriod: must be a positive number');
+                return false;
+            }
+
+            if (resources.memory !== undefined && (typeof resources.memory !== 'number' || isNaN(resources.memory) || resources.memory < 0)) {
+                logError('Invalid resources.memory: must be a non-negative number');
+                return false;
+            }
+
+            try {
+                logInfo(`Updating resources for container ${containerId}...`);
+
+                // Get current container configuration
+                const containerInfo = await this.auth.axiosInstance.get(
+                    `/api/endpoints/${environmentId}/docker/containers/${containerId}/json`
+                );
+
+                const updateConfig = {
+                    Memory: resources.memory || containerInfo.data.HostConfig.Memory,
+                    CpuQuota: resources.cpuQuota || containerInfo.data.HostConfig.CpuQuota,
+                    CpuPeriod: resources.cpuPeriod || containerInfo.data.HostConfig.CpuPeriod,
+                    // Preserve other existing configurations
+                    RestartPolicy: containerInfo.data.HostConfig.RestartPolicy,
+                };
+
+                await this.auth.axiosInstance.post(
+                    `/api/endpoints/${environmentId}/docker/containers/${containerId}/update`,
+                    updateConfig
+                );
+
+                logInfo(`Container resources updated successfully`);
+                return true;
+            } catch (error) {
+                logError(`Failed to update container resources for ${containerId}:`, error);
+                return false;
+            }
         }
-    }
     }
 }
