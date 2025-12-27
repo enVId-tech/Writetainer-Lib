@@ -1,7 +1,7 @@
 import { logError } from "../../logger.ts";
 import type { Constructor, PortainerContainer, PortainerImage, PortainerStack } from "../types.ts";
 
-interface RFMixin {
+interface ResourceFetchingMixinBase {
     auth: {
         axiosInstance: import("axios").AxiosInstance;
         isValidated: boolean;
@@ -9,7 +9,7 @@ interface RFMixin {
     ensureEnvId: () => Promise<number | null>;
 }
 
-export function ResourceFetchingMixin<TBase extends Constructor<RFMixin>>(Base: TBase) {
+export function ResourceFetchingMixin<TBase extends Constructor<ResourceFetchingMixinBase>>(Base: TBase) {
     return class extends Base {
         /**
          * Fetches a list of all stacks managed by Portainer.

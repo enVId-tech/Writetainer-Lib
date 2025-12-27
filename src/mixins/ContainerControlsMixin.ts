@@ -1,28 +1,39 @@
 import { logError, logInfo } from "../../logger.ts";
 import type { Constructor } from "../types.ts";
 
-interface CCtrlMixin {
+interface ContainerControlsMixinBase {
     auth: {
         axiosInstance: import("axios").AxiosInstance;
     };
     ensureEnvId: () => Promise<number | null>;
 }
 
-interface ContainerControls {
-    action: 'start' | 'stop' | 'remove' | 'kill' | 'pause' | 'unpause' | 'restart';
-    containerId: string;
-    environmentId?: number | null;
-    options?: {
-        force?: boolean;
-        removeVolumes?: boolean;
-        signal?: string;
-        timeout?: number;
-    };
+type ContainerAction = 'start' | 'stop' | 'remove' | 'kill' | 'pause' | 'unpause' | 'restart';
+
+interface ContainerActionOptions {
+    force?: boolean;
+    removeVolumes?: boolean;
+    signal?: string;
+    timeout?: number;
 }
 
-export function ContainerControlsMixin<TBase extends Constructor<CCtrlMixin>>(Base: TBase) {
+interface ContainerControls {
+    action: ContainerAction;
+    containerId: string;
+    environmentId?: number | null;
+    options?: ContainerActionOptions;
+}
+
+export function ContainerControlsMixin<TBase extends Constructor<ContainerControlsMixinBase>>(Base: TBase) {
     return class extends Base {
-        async handleContainer(controls: ContainerControls): Promise<boolean> {
+        private readonly VALID_ACTIONS: ReadonlyArray<ContainerAction> = 
+            ['start', 'stop', 'remove', 'kill', 'pause', 'unpause', 'restart'];
+
+        /**
+         * Validates container control parameters
+         * @private
+         */
+        private validateContainerControls(controls: ContainerControls): boolean {
             if (!controls || typeof controls !== 'object') {
                 logError('Invalid controls: must be an object');
                 return false;
@@ -33,9 +44,8 @@ export function ContainerControlsMixin<TBase extends Constructor<CCtrlMixin>>(Ba
                 return false;
             }
 
-            const validActions = ['start', 'stop', 'remove', 'kill', 'pause', 'unpause', 'restart'];
-            if (!validActions.includes(controls.action)) {
-                logError(`Invalid action: must be one of ${validActions.join(', ')}`);
+            if (!this.VALID_ACTIONS.includes(controls.action)) {
+                logError(`Invalid action: must be one of ${this.VALID_ACTIONS.join(', ')}`);
                 return false;
             }
 
@@ -44,107 +54,218 @@ export function ContainerControlsMixin<TBase extends Constructor<CCtrlMixin>>(Ba
                 return false;
             }
 
-            if (controls.environmentId !== undefined && controls.environmentId !== null && (typeof controls.environmentId !== 'number' || isNaN(controls.environmentId))) {
+            if (controls.environmentId !== undefined && controls.environmentId !== null && 
+                (typeof controls.environmentId !== 'number' || isNaN(controls.environmentId))) {
                 logError('Invalid environmentId: must be a number, null, or undefined');
                 return false;
             }
 
-            if (controls.options) {
-                if (typeof controls.options !== 'object') {
-                    logError('Invalid options: must be an object');
-                    return false;
-                }
-                if (controls.options.force !== undefined && typeof controls.options.force !== 'boolean') {
-                    logError('Invalid options.force: must be a boolean');
-                    return false;
-                }
-                if (controls.options.removeVolumes !== undefined && typeof controls.options.removeVolumes !== 'boolean') {
-                    logError('Invalid options.removeVolumes: must be a boolean');
-                    return false;
-                }
-                if (controls.options.signal !== undefined && typeof controls.options.signal !== 'string') {
-                    logError('Invalid options.signal: must be a string');
-                    return false;
-                }
-                if (controls.options.timeout !== undefined && (typeof controls.options.timeout !== 'number' || isNaN(controls.options.timeout) || controls.options.timeout < 0)) {
-                    logError('Invalid options.timeout: must be a non-negative number');
-                    return false;
-                }
+            return this.validateContainerOptions(controls.options);
+        }
+
+        /**
+         * Validates container action options
+         * @private
+         */
+        private validateContainerOptions(options?: ContainerActionOptions): boolean {
+            if (!options) return true;
+
+            if (typeof options !== 'object') {
+                logError('Invalid options: must be an object');
+                return false;
             }
 
-            if (controls.environmentId === null || controls.environmentId === undefined) {
-                controls.environmentId = await this.ensureEnvId();
+            if (options.force !== undefined && typeof options.force !== 'boolean') {
+                logError('Invalid options.force: must be a boolean');
+                return false;
             }
 
-            if (controls.environmentId === null) {
+            if (options.removeVolumes !== undefined && typeof options.removeVolumes !== 'boolean') {
+                logError('Invalid options.removeVolumes: must be a boolean');
+                return false;
+            }
+
+            if (options.signal !== undefined && typeof options.signal !== 'string') {
+                logError('Invalid options.signal: must be a string');
+                return false;
+            }
+
+            if (options.timeout !== undefined && 
+                (typeof options.timeout !== 'number' || isNaN(options.timeout) || options.timeout < 0)) {
+                logError('Invalid options.timeout: must be a non-negative number');
+                return false;
+            }
+
+            return true;
+        }
+
+        /**
+         * Builds URL for container actions
+         * @private
+         */
+        private buildContainerUrl(environmentId: number, containerId: string, action: string): string {
+            return `/api/endpoints/${environmentId}/docker/containers/${containerId}/${action}`;
+        }
+
+        /**
+         * Executes the specified container action
+         * @private
+         */
+        private async executeContainerAction(
+            action: ContainerAction,
+            containerId: string,
+            environmentId: number,
+            options?: ContainerActionOptions
+        ): Promise<void> {
+            switch (action) {
+                case 'start':
+                    await this.startContainer(containerId, environmentId);
+                    break;
+                case 'stop':
+                    await this.stopContainer(containerId, environmentId);
+                    break;
+                case 'remove':
+                    await this.removeContainer(containerId, environmentId, options);
+                    break;
+                case 'kill':
+                    await this.killContainer(containerId, environmentId, options?.signal);
+                    break;
+                case 'pause':
+                    await this.pauseContainer(containerId, environmentId);
+                    break;
+                case 'unpause':
+                    await this.unpauseContainer(containerId, environmentId);
+                    break;
+                case 'restart':
+                    await this.restartContainer(containerId, environmentId, options?.timeout);
+                    break;
+            }
+        }
+
+        /**
+         * Starts a container
+         * @private
+         */
+        private async startContainer(containerId: string, environmentId: number): Promise<void> {
+            logInfo(`Starting container ${containerId}...`);
+            await this.auth.axiosInstance.post(this.buildContainerUrl(environmentId, containerId, 'start'));
+            logInfo('Container started successfully');
+        }
+
+        /**
+         * Stops a container
+         * @private
+         */
+        private async stopContainer(containerId: string, environmentId: number): Promise<void> {
+            logInfo(`Stopping container ${containerId}...`);
+            await this.auth.axiosInstance.post(this.buildContainerUrl(environmentId, containerId, 'stop'));
+            logInfo('Container stopped successfully');
+        }
+
+        /**
+         * Removes a container
+         * @private
+         */
+        private async removeContainer(
+            containerId: string,
+            environmentId: number,
+            options?: ContainerActionOptions
+        ): Promise<void> {
+            logInfo(`Removing container ${containerId}...`);
+            const params = new URLSearchParams();
+            if (options?.force) params.append('force', 'true');
+            if (options?.removeVolumes) params.append('v', 'true');
+            const url = `${this.buildContainerUrl(environmentId, containerId, '')}?${params.toString()}`;
+            await this.auth.axiosInstance.delete(url);
+            logInfo('Container removed successfully');
+        }
+
+        /**
+         * Kills a container
+         * @private
+         */
+        private async killContainer(
+            containerId: string,
+            environmentId: number,
+            signal: string = 'SIGKILL'
+        ): Promise<void> {
+            logInfo(`Killing container ${containerId} with signal ${signal}...`);
+            await this.auth.axiosInstance.post(
+                `${this.buildContainerUrl(environmentId, containerId, 'kill')}?signal=${signal}`
+            );
+            logInfo('Container killed successfully');
+        }
+
+        /**
+         * Pauses a container
+         * @private
+         */
+        private async pauseContainer(containerId: string, environmentId: number): Promise<void> {
+            logInfo(`Pausing container ${containerId}...`);
+            await this.auth.axiosInstance.post(this.buildContainerUrl(environmentId, containerId, 'pause'));
+            logInfo('Container paused successfully');
+        }
+
+        /**
+         * Unpauses a container
+         * @private
+         */
+        private async unpauseContainer(containerId: string, environmentId: number): Promise<void> {
+            logInfo(`Unpausing container ${containerId}...`);
+            await this.auth.axiosInstance.post(this.buildContainerUrl(environmentId, containerId, 'unpause'));
+            logInfo('Container unpaused successfully');
+        }
+
+        /**
+         * Restarts a container
+         * @private
+         */
+        private async restartContainer(
+            containerId: string,
+            environmentId: number,
+            timeout: number = 10000
+        ): Promise<void> {
+            logInfo(`Restarting container ${containerId}...`);
+            const timeoutSeconds = (timeout / 1000).toPrecision(2);
+            await this.auth.axiosInstance.post(
+                `${this.buildContainerUrl(environmentId, containerId, 'restart')}?t=${timeoutSeconds}`
+            );
+            logInfo('Container restarted successfully');
+        }
+
+        /**
+         * Handles container control actions
+         * @param controls - Container control configuration
+         * @returns Promise resolving to true if successful, false otherwise
+         */
+
+        async handleContainer(controls: ContainerControls): Promise<boolean> {
+            // Validate all parameters
+            if (!this.validateContainerControls(controls)) {
+                return false;
+            }
+
+            // Resolve environment ID
+            let environmentId = controls.environmentId;
+            if (environmentId === null || environmentId === undefined) {
+                environmentId = await this.ensureEnvId();
+            }
+
+            if (environmentId === null) {
                 logError('No Portainer environments found. Cannot perform container action.');
                 return false;
             }
 
+            // Execute the action
             try {
-                switch (controls.action) {
-                    case 'start':
-                        {
-                            logInfo(`Starting container ${controls.containerId}...`);
-                            await this.auth.axiosInstance.post(`/api/endpoints/${controls.environmentId}/docker/containers/${controls.containerId}/start`);
-                            logInfo('Container started successfully');
-                            break;
-                        }
-                    case 'stop':
-                        {
-                            logInfo(`Stopping container ${controls.containerId}...`);
-                            await this.auth.axiosInstance.post(`/api/endpoints/${controls.environmentId}/docker/containers/${controls.containerId}/stop`);
-                            logInfo('Container stopped successfully');
-                            break;
-                        }
-                    case 'remove':
-                        {
-                            logInfo(`Removing container ${controls.containerId}...`);
-                            const params = new URLSearchParams();
-                            if (controls.options?.force) params.append('force', 'true');
-                            if (controls.options?.removeVolumes) params.append('v', 'true');
-                            const url = `/api/endpoints/${controls.environmentId}/docker/containers/${controls.containerId}?${params.toString()}`;
-                            await this.auth.axiosInstance.delete(url);
-                            logInfo('Container removed successfully');
-                            break;
-                        }
-                    case 'kill':
-                        {
-                            const signal = controls.options?.signal || 'SIGKILL';
-                            logInfo(`Killing container ${controls.containerId} with signal ${signal}...`);
-                            await this.auth.axiosInstance.post(`/api/endpoints/${controls.environmentId}/docker/containers/${controls.containerId}/kill?signal=${signal}`);
-                            logInfo('Container killed successfully');
-                            break;
-                        }
-                    case 'pause':
-                        {
-                            logInfo(`Pausing container ${controls.containerId}...`);
-                            await this.auth.axiosInstance.post(`/api/endpoints/${controls.environmentId}/docker/containers/${controls.containerId}/pause`);
-                            logInfo('Container paused successfully');
-                            break;
-                        }
-                    case 'unpause':
-                        {
-                            logInfo(`Unpausing container ${controls.containerId}...`);
-                            await this.auth.axiosInstance.post(`/api/endpoints/${controls.environmentId}/docker/containers/${controls.containerId}/unpause`);
-                            logInfo('Container unpaused successfully');
-                            break;
-                        }
-                    case 'restart':
-                        {
-                            const timeout = controls.options?.timeout || 10000;
-                            logInfo(`Restarting container ${controls.containerId}...`);
-                            await this.auth.axiosInstance.post(`/api/endpoints/${controls.environmentId}/docker/containers/${controls.containerId}/restart?t=${(timeout / 1000).toPrecision(2)}`);
-                            logInfo('Container restarted successfully');
-                            break;
-                        }
-                    default:
-                        logError(`Unknown action: ${controls.action}`);
-                        return false;
-                }
+                await this.executeContainerAction(
+                    controls.action,
+                    controls.containerId,
+                    environmentId,
+                    controls.options
+                );
                 return true;
-            }
-            catch (error) {
+            } catch (error) {
                 logError(`Failed to ${controls.action} container ${controls.containerId}:`, error);
                 return false;
             }

@@ -28,11 +28,14 @@ const ApiStack = StackControlsMixin(
 // Maintain singleton instance
 class PortainerApi extends ApiStack {
     public static instance: PortainerApi;
+    
+    // Make constructor private to enforce singleton pattern
     private constructor(
         environmentId: number | null = null
     ) {
         super(environmentId);
     }
+    
     public static getInstance(
         environmentId: number | null = null
     ): PortainerApi {
@@ -42,4 +45,5 @@ class PortainerApi extends ApiStack {
         return PortainerApi.instance;
     }
 }
+
 export { PortainerApi };

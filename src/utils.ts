@@ -55,7 +55,7 @@ export async function getContainerByDetails(
             return null;
         }
 
-        const container = await containers.find(container => {
+        const container = await containers.find((container: PortainerContainer) => {
             let matches = true;
             if (criteria.image) {
                 matches = matches && container.Image === criteria.image;
