@@ -1,6 +1,6 @@
 {
   "name": "writetainer-lib",
-  "version": "25.12.27-dev.9",
+  "version": "26.03.20.1",
   "description": "A TypeScript library for interacting with the Portainer API to manage Docker containers and stacks programmatically.",
   "homepage": "https://github.com/enVId-tech/Writetainer-Lib#readme",
   "bugs": {

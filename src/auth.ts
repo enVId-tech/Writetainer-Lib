@@ -4,9 +4,9 @@ import { logError } from '../logger.ts';
 
 export class PortainerAuth {
     private static instance: PortainerAuth;
-    private readonly portainerUrl: string; // Portainer URL, must be defined
-    private readonly apiKey: string; // Access token, must be defined for API calls
     public readonly axiosInstance: AxiosInstance;
+    private portainerUrl: string; // Portainer URL, must be defined
+    private apiKey: string; // Access token, must be defined for API calls
     public isValidated: boolean; // Indicates if authentication has been validated
 
     /**
@@ -75,10 +75,13 @@ export class PortainerAuth {
     }
 
     // Singleton instance to improve performance by reusing the same auth instance
-    public static getInstance(): PortainerAuth {
+    public static getInstance(
+        pUrl: string | undefined = undefined,
+        aKey: string | undefined = undefined
+    ): PortainerAuth {
         if (!PortainerAuth.instance) {
-            const portainerUrl = process.env.PORTAINER_URL;
-            const apiKey = process.env.PORTAINER_API_KEY;
+            const portainerUrl: string | undefined = pUrl || process.env.PORTAINER_URL;
+            const apiKey: string | undefined = aKey || process.env.PORTAINER_API_KEY;
             if (!portainerUrl || !apiKey) {
                 throw new Error('PORTAINER_URL and PORTAINER_API_KEY must be defined in environment variables.');
             }

@@ -46,4 +46,4 @@ class PortainerApi extends ApiStack {
     }
 }
 
-export { PortainerApi };
+export { PortainerApi, PortainerApiBase };
