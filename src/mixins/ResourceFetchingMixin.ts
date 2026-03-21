@@ -222,6 +222,18 @@ export function ResourceFetchingMixin<TBase extends Constructor<ResourceFetching
         }
 
         /**
+         * Finds container by name in container list
+         */
+        findContainerByName(
+            containers: PortainerContainer[],
+            containerName: string
+        ): PortainerContainer | undefined {
+            return containers.find(c =>
+                c.Names.some(name => name.includes(containerName) || name === `/${containerName}`)
+            );
+        }
+
+        /**
          * Fetches a list of all Docker images within a specific Portainer environment.
          * This proxies the Docker API's /images/json endpoint.
          * @param environmentId - Optional: The ID of the Portainer environment.

@@ -38,9 +38,9 @@
   ],
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
-    "@types/debug": "^4.1.12",
-    "@types/node": "^25.3.2",
-    "vitest": "^4.0.18"
+    "@types/debug": "^4.1.13",
+    "@types/node": "^25.5.0",
+    "vitest": "^4.1.0"
   },
   "type": "module"
 }

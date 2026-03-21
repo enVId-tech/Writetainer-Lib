@@ -8,6 +8,7 @@ interface ResourceDeletionMixinBase {
     };
     ensureEnvId: () => Promise<number | null>;
     getContainers: (includeAll: boolean, environmentId?: number | null) => Promise<PortainerContainer[] | undefined>;
+    findContainerByName: (continers: PortainerContainer[], containerName: string) => PortainerContainer | undefined;
 }
 
 export function ResourceDeletionMixin<TBase extends Constructor<ResourceDeletionMixinBase>>(Base: TBase) {
@@ -28,18 +29,6 @@ export function ResourceDeletionMixin<TBase extends Constructor<ResourceDeletion
             }
 
             return true;
-        }
-
-        /**
-         * Finds container by name in container list
-         */
-        findContainerByName(
-            containers: PortainerContainer[],
-            containerName: string
-        ): PortainerContainer | undefined {
-            return containers.find(c =>
-                c.Names.some(name => name.includes(containerName) || name === `/${containerName}`)
-            );
         }
 
         /**
