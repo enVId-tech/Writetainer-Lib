@@ -3,6 +3,7 @@ import { EnvironmentsMixin } from './mixins/EnvironmentMixins.ts';
 import { ResourceFetchingMixin } from './mixins/ResourceFetchingMixin.ts';
 import { ResourceDeletionMixin } from './mixins/ResourceDeletionMixin.ts';
 import { StackControlsMixin } from './mixins/StackControlsMixin.ts';
+import { logWarn } from '../logger.ts';
 
 class PortainerApiBase {
     auth: PortainerAuth;
@@ -36,13 +37,21 @@ class PortainerApi extends ApiStack {
         super(environmentId);
     }
     
-    public static getInstance(
-        environmentId: number | null = null
-    ): PortainerApi {
+    public static getInstance(): PortainerApi {
         if (!PortainerApi.instance) {
-            PortainerApi.instance = new PortainerApi(environmentId);
+            PortainerApi.instance = new PortainerApi();
         }
         return PortainerApi.instance;
+    }
+
+    public static initialize(
+        environmentId: number | null = null
+    ): void {
+        if (this.instance) {
+            logWarn('PortainerApi is already initialized. Reinitializing will overwrite the existing instance.');
+        }
+
+        PortainerApi.instance = new PortainerApi(environmentId);
     }
 }
 

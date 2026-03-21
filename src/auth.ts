@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
 import https from 'https';
-import { logError } from '../logger.ts';
+import { logError, logWarn } from '../logger.ts';
 
 export class PortainerAuth {
     private static instance: PortainerAuth;
@@ -75,20 +75,33 @@ export class PortainerAuth {
     }
 
     // Singleton instance to improve performance by reusing the same auth instance
-    public static getInstance(
-        pUrl: string | undefined = undefined,
-        aKey: string | undefined = undefined
-    ): PortainerAuth {
+    public static getInstance(): PortainerAuth {
         if (!PortainerAuth.instance) {
-            const portainerUrl: string | undefined = pUrl || process.env.PORTAINER_URL;
-            const apiKey: string | undefined = aKey || process.env.PORTAINER_API_KEY;
-            if (!portainerUrl || !apiKey) {
-                throw new Error('PORTAINER_URL and PORTAINER_API_KEY must be defined in environment variables.');
-            }
-            PortainerAuth.instance = new PortainerAuth(portainerUrl, apiKey);
+            logError('PortainerAuth instance is not initialized. Call PortainerAuth.initialize(portainerUrl, apiKey) before using getInstance().');
+            return null as unknown as PortainerAuth; // Return null if not initialized, caller should handle this case
         }
         return PortainerAuth.instance;
     }
+
+    public static initialize(
+        portainerUrl?: string,
+        apiKey?: string
+    ): void {
+        if (this.instance.portainerUrl && this.instance.apiKey) {
+            logWarn('PortainerAuth is already initialized. Reinitializing will overwrite the existing configuration.');
+        }
+
+        const portainerUrlToUse = portainerUrl || process.env.PORTAINER_URL;
+        const apiKeyToUse = apiKey || process.env.PORTAINER_API_KEY;
+
+        if (!portainerUrlToUse || !apiKeyToUse) {
+            logError('PORTAINER_URL and PORTAINER_API_KEY must be provided either as parameters or defined in environment variables.');
+            return
+        }
+
+        PortainerAuth.instance = new PortainerAuth(portainerUrlToUse, apiKeyToUse);
+    }
+
 
     /**
      * Updates the Axios instance headers with the current API key.
